@@ -158,10 +158,11 @@ sub bind {
 	#$msg = $self->{upstream}->unbind;
 	#warn "# unbind msg = ",dump( $msg );
 
-	$msg = $self->{upstream}->bind(
-		dn => $req->{name},
-		password => $req->{authentication}->{simple}
-	);
+	my $bind;
+	$bind->{dn} = $req->{name} if $req->{name};
+	$bind->{password} = $req->{authentication}->{simple} if $req->{authentication}->{simple};
+	warn "# bind ",dump( $bind );
+	$msg = $self->{upstream}->bind( %$bind );
 
 	#warn "# bind msg = ",dump( $msg );
 	if ( $msg->code != LDAP_SUCCESS ) {
