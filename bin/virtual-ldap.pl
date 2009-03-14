@@ -4,8 +4,8 @@ use strict;
 use warnings;
 
 use lib 'lib';
-use VLDAP::Server;
+use LDAP::Virtual;
 
-VLDAP::Server->run({ port => 1389 });
+LDAP::Virtual->run({ port => 1389 });
 
 1;

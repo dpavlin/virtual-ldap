@@ -1,4 +1,4 @@
-package VLDAP::Server;
+package LDAP::Virtual;
 
 use strict;
 use warnings;
@@ -24,7 +24,7 @@ use Data::Dump qw/dump/;
 
 =head1 NAME
 
-VLDAP::Server
+LDAP::Virtual
 
 =cut
 
@@ -36,7 +36,7 @@ Provide LDAP server functionality somewhat similar to C<slapo-rwm>
 
 =head2 run
 
-  my $pid = VLDAP::Server->run({ port => 1389, fork => 0 });
+  my $pid = LDAP::Virtual->run({ port => 1389, fork => 0 });
 
 =cut
 
@@ -82,7 +82,7 @@ sub run {
 				# let's create a new socket
 				my $psock = $sock->accept;
 				$sel->add($psock);
-				$Handlers{*$psock} = VLDAP::Server->new($psock);
+				$Handlers{*$psock} = LDAP::Virtual->new($psock);
 			} else {
 				my $result = $Handlers{*$fh}->handle;
 				if ($result) {
@@ -98,7 +98,7 @@ sub run {
 
 =head2 stop
 
-  my $stopped_pids = VLDAP::Server->stop;
+  my $stopped_pids = LDAP::Virtual->stop;
 
 =cut
 

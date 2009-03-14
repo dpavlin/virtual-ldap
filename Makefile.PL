@@ -1,6 +1,6 @@
 use inc::Module::Install;
 
-name        'VLDAP';
+name        'LDAP-Virtual';
 version     '0.00';
 license     'GPL';
 
