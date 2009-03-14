@@ -44,8 +44,7 @@ our $pids;
 our $cache;
 
 sub cache {
-	return $cache if $cache;
-	$cache = new A3C::Cache->new({ instance => '', dir => 'ldap' });
+	return $cache;
 }
 
 sub run {
@@ -241,7 +240,7 @@ sub search {
 
 	warn "## entries = ",dump( @entries );
 
-	$self->cache->write_cache( \@entries, uri_escape( $filter ));
+#	$self->cache->write_cache( \@entries, uri_escape( $filter ));
 
 	return RESULT_OK, @entries;
 }
