@@ -20,6 +20,8 @@ use URI::Escape;	# uri_escape
 use IO::Socket::INET;
 use IO::Select;
 
+use YAML qw/DumpFile/;
+
 use Data::Dump qw/dump/;
 
 =head1 NAME
@@ -241,6 +243,10 @@ sub search {
 	warn "## entries = ",dump( @entries );
 
 #	$self->cache->write_cache( \@entries, uri_escape( $filter ));
+
+	my $path = uri_escape( $filter );
+	DumpFile( "var/${path}.yml", \@entries );
+	warn "# created $path ", -s $path, " bytes";
 
 	return RESULT_OK, @entries;
 }
