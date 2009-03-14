@@ -14,6 +14,8 @@ use Net::LDAP::Filter;
 use base qw(Net::LDAP::Server);
 use fields qw(upstream);
 
+use Net::LDAP;
+
 use URI::Escape;	# uri_escape
 use IO::Socket::INET;
 use IO::Select;
@@ -22,19 +24,19 @@ use Data::Dump qw/dump/;
 
 =head1 NAME
 
-A3C::LDAP::Server
+VLDAP::Server
 
 =cut
 
 =head1 DESCRIPTION
 
-Provide LDAP server functionality for L<A3C> somewhat similar to C<slapo-rwm>
+Provide LDAP server functionality somewhat similar to C<slapo-rwm>
 
 =head1 METHODS
 
 =head2 run
 
-  my $pid = A3C::LDAP::Server->run({ port => 1389, fork => 0 });
+  my $pid = VLDAP::Server->run({ port => 1389, fork => 0 });
 
 =cut
 
@@ -80,7 +82,7 @@ sub run {
 				# let's create a new socket
 				my $psock = $sock->accept;
 				$sel->add($psock);
-				$Handlers{*$psock} = A3C::LDAP::Server->new($psock);
+				$Handlers{*$psock} = VLDAP::Server->new($psock);
 			} else {
 				my $result = $Handlers{*$fh}->handle;
 				if ($result) {
@@ -96,7 +98,7 @@ sub run {
 
 =head2 stop
 
-  my $stopped_pids = A3C::LDAP::Server->stop;
+  my $stopped_pids = VLDAP::Server->stop;
 
 =cut
 
@@ -141,18 +143,18 @@ sub bind {
 		resultCode => LDAP_STRONG_AUTH_NOT_SUPPORTED,
 	};
 
-	$self->{upstream} ||= A3C::LDAP->new->ldap or return {
+	$self->{upstream} ||= Net::LDAP->new( 'ldaps://ldap.ffzg.hr/' ) or return {
 		matchedDN => '',
 		errorMessage => $@,
 		resultCode => LDAP_UNAVAILABLE,
 	};
 
-#	warn "## upstream = ",dump( $self->{upstream} );
-#	warn "upstream not Net::LDAP but ",ref($self->{upstream}) unless ref($self->{upstream}) eq 'Net::LDAP';
+	warn "## upstream = ",dump( $self->{upstream} );
+	warn "upstream not Net::LDAP but ",ref($self->{upstream}) unless ref($self->{upstream}) eq 'Net::LDAP';
 
 	my $msg;
 
-	# FIXME we would need to unbind because A3C::LDAP binds us automatically, but that doesn't really work
+	# FIXME we would need to unbind because VLDAP binds us automatically, but that doesn't really work
 	#$msg = $self->{upstream}->unbind;
 	#warn "# unbind msg = ",dump( $msg );
 

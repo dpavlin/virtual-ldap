@@ -7,7 +7,7 @@ license     'GPL';
 requires	'Net::LDAP::Server';
 requires	'URI::Escape';
 requires	'IO::Socket::INET';
-requires    'Data::Dump';
+requires	'Data::Dump';
 
 auto_install;
 
