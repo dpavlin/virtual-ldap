@@ -9,6 +9,7 @@ use warnings;
 
 use IO::Select;
 use IO::Socket;
+use IO::Socket::SSL;
 use warnings;
 use Data::Dump qw/dump/;
 use Convert::ASN1 qw(asn_read);
@@ -143,6 +144,8 @@ my $targetsock = new IO::Socket::INET (
 	PeerAddr => 'ldap.ffzg.hr',
 	PeerPort => 389,
 );
+
+$targetsock = IO::Socket::SSL->new("ldap.ffzg.hr:ldaps");
 
 run_proxy($listenersock,$targetsock);
 
