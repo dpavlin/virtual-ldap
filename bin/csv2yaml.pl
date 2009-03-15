@@ -37,7 +37,20 @@ foreach my $line ( split(/\r?\n/, $csv) ) {
 
 	warn "# fields = ",dump( @fields ) if $debug;
 
-	$hash->{ $columns[$_] } = $fields[$_] foreach ( 0 .. $#fields );
+	foreach ( 0 .. $#fields ) {
+		my $n = $columns[$_];
+		my $v = $fields[$_];
+
+		$v =~ s{\s*#\s*$}{};
+
+		if ( $v =~ m{#} ) {
+			my @v = split(/\s*#\s*/, $v);
+			foreach my $pos ( 0 .. $#v ) {
+				$hash->{ $n . '_' . $pos } = $v[$pos];
+			}
+		}
+		$hash->{ $n } = $v;
+	}
 
 	warn dump( $hash ) if $debug;
 
