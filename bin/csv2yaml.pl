@@ -45,11 +45,20 @@ foreach my $line ( split(/\r?\n/, $csv) ) {
 		$v =~ s{^\s+}{};
 		$v =~ s{\s+$}{};
 
+		# fix tel fields
+		$v =~ s{\s+}{#}g if $n =~ m{tel};
+
 		if ( $v =~ m{#} ) {
 			my @v = split(/\s*#\s*/, $v);
 			foreach my $pos ( 0 .. $#v ) {
+				if ( $n =~ m{tel} ) {
+					if ( $v[$pos] =~ m{^09} ) {
+						$hash->{ $n . '_mobile' } ||= $v[$pos];
+					} else {
+						$hash->{ $n . '_fixed' } ||= $v[$pos];
+					}
+				}
 				$hash->{ $n . '_' . $pos } = $v[$pos];
-				$hash->{ $n . '_mobitel' } = $v[$pos] if $n =~ m{tel} && $v[$pos] =~ m{^09};
 			}
 		}
 		$hash->{ $n } = $v;
