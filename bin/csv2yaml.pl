@@ -47,6 +47,7 @@ foreach my $line ( split(/\r?\n/, $csv) ) {
 
 		# fix tel fields
 		$v =~ s{\s+}{#}g if $n =~ m{tel};
+		$v =~ s[\x{17d}][F] if $n =~ m{spol};
 
 		if ( $v =~ m{#} ) {
 			my @v = split(/\s*#\s*/, $v);
