@@ -18,6 +18,21 @@ our $VERSION = '0.2';
 use fields qw(socket target);
 use YAML qw/LoadFile/;
 
+my $config = {
+	yaml_dir => './yaml/',
+	listen => 'localhost:1389',
+	upstream_ldap => 'ldap.ffzg.hr',
+	upstream_ssl => 1,
+	overlay_prefix => 'ffzg-',
+
+};
+
+if ( ! -d $config->{yaml_dir} ) {
+	warn "DISABLE ", $config->{yaml_dir}," data overlay";
+}
+
+warn "# config = ",dump( $config );
+
 sub handle {
  	my $clientsocket=shift;
 	my $serversocket=shift;
@@ -77,7 +92,7 @@ if(0) {
 		} @{ $response->{protocolOp}->{searchResEntry}->{attributes} };
 }
 
-		my $path = "yaml/$uid.yaml";
+		my $path = $config->{yaml_dir} . "$uid.yaml";
 		if ( -e $path ) {
 			my $data = LoadFile($path);
 			warn "# yaml = ",dump($data);
@@ -90,7 +105,7 @@ if(0) {
 				my @vals = split(/\s*#\s*/, $vals);
 
 				push @{ $response->{protocolOp}->{searchResEntry}->{attributes} },
-					{ type => "ffzg-$type", vals => [ @vals ] };
+					{ type => $config->{overlay_prefix} . $type, vals => [ @vals ] };
 			}
 		}
 
@@ -135,17 +150,18 @@ my $listenersock = IO::Socket::INET->new(
 	Listen => 5,
 	Proto => 'tcp',
 	Reuse => 1,
-	LocalPort => 1389
+	LocalAddr => $config->{listen},
 );
 
 
-my $targetsock = new IO::Socket::INET (
-	Proto => 'tcp',
-	PeerAddr => 'ldap.ffzg.hr',
-	PeerPort => 389,
-);
-
-$targetsock = IO::Socket::SSL->new("ldap.ffzg.hr:ldaps");
+my $targetsock = $config->{upstream_ssl}
+	? IO::Socket::INET->new(
+		Proto => 'tcp',
+		PeerAddr => $config->{upstream_ldap},
+		PeerPort => 389,
+	)
+	: IO::Socket::SSL->new( $config->{upstream_ldap} . ':ldaps')
+	;
 
 run_proxy($listenersock,$targetsock);
 
