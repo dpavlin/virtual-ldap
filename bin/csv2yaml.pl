@@ -49,6 +49,7 @@ foreach my $line ( split(/\r?\n/, $csv) ) {
 			my @v = split(/\s*#\s*/, $v);
 			foreach my $pos ( 0 .. $#v ) {
 				$hash->{ $n . '_' . $pos } = $v[$pos];
+				$hash->{ $n . '_mobitel' } = $v[$pos] if $n =~ m{tel} && $v[$pos] =~ m{^09};
 			}
 		}
 		$hash->{ $n } = $v;
