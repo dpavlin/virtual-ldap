@@ -42,6 +42,8 @@ foreach my $line ( split(/\r?\n/, $csv) ) {
 		my $v = $fields[$_];
 
 		$v =~ s{\s*#\s*$}{};
+		$v =~ s{^\s+}{};
+		$v =~ s{\s+$}{};
 
 		if ( $v =~ m{#} ) {
 			my @v = split(/\s*#\s*/, $v);
