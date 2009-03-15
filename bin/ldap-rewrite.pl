@@ -15,6 +15,7 @@ use Convert::ASN1 qw(asn_read);
 use Net::LDAP::ASN qw(LDAPRequest LDAPResponse);
 our $VERSION = '0.2';
 use fields qw(socket target);
+use YAML qw/LoadFile/;
 
 sub handle {
  	my $clientsocket=shift;
@@ -62,23 +63,40 @@ sub log_response {
 	Convert::ASN1::asn_hexdump(\*STDOUT,$pdu);
 	print "Response Perl:\n";
 	my $response = $LDAPResponse->decode($pdu);
-	print dump($response);
 
 	if ( defined $response->{protocolOp}->{searchResEntry} ) {
 		my $uid = $response->{protocolOp}->{searchResEntry}->{objectName};
 		warn "## SEARCH $uid";
+
+if(0) {
 		map {
 			if ( $_->{type} eq 'postalAddress' ) {
 				$_->{vals} = [ 'foobar' ];
 			}
 		} @{ $response->{protocolOp}->{searchResEntry}->{attributes} };
+}
 
-		push @{ $response->{protocolOp}->{searchResEntry}->{attributes} },
-			{ type => 'ffzg-datum_rodjenja', vals => [ '2009-01-01' ], }
-		;
+		my $path = "yaml/$uid.yaml";
+		if ( -e $path ) {
+			my $data = LoadFile($path);
+			warn "# yaml = ",dump($data);
+
+			foreach my $type ( keys %$data ) {
+
+				my $vals = $data->{$type};
+				$vals =~ s{#\s*$}{};
+				
+				my @vals = split(/\s*#\s*/, $vals);
+
+				push @{ $response->{protocolOp}->{searchResEntry}->{attributes} },
+					{ type => "ffzg-$type", vals => [ @vals ] };
+			}
+		}
 
 		$pdu = $LDAPResponse->encode($response);
 	}
+
+	print dump($response);
 
 	return $pdu;
 }
