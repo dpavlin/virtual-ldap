@@ -49,7 +49,7 @@ foreach my $line ( split(/\r?\n/, $csv) ) {
 		$v =~ s{\s+}{#}g if $n =~ m{tel};
 		$v =~ s[\x{17d}][F] if $n =~ m{spol};
 
-		if ( $v =~ m{#} ) {
+		if ( $v =~ m{#} ) { # subfields delimiter in CSV data
 			my @v = split(/\s*#+\s*/, $v);
 			foreach my $pos ( 0 .. $#v ) {
 				if ( $n =~ m{tel} ) {
@@ -61,8 +61,11 @@ foreach my $line ( split(/\r?\n/, $csv) ) {
 				}
 				$hash->{ $n . '_' . $pos } = $v[$pos];
 			}
+
+			$hash->{ $n } = [ @v ];
+		} else {
+			$hash->{ $n } = $v;
 		}
-		$hash->{ $n } = $v;
 	}
 
 	warn dump( $hash ) if $debug;
