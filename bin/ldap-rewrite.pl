@@ -108,12 +108,11 @@ sub log_response {
 			foreach my $type ( keys %$data ) {
 
 				my $vals = $data->{$type};
-				$vals =~ s{#\s*$}{};
-				
-				my @vals = split(/\s*#\s*/, $vals);
 
-				push @{ $response->{protocolOp}->{searchResEntry}->{attributes} },
-					{ type => $config->{overlay_prefix} . $type, vals => [ @vals ] };
+				push @{ $response->{protocolOp}->{searchResEntry}->{attributes} }, {
+					type => $config->{overlay_prefix} . $type,
+					vals => ref($vals) eq 'ARRAY' ? $vals : [ $vals ],
+				};
 			}
 		}
 
