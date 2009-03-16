@@ -131,10 +131,6 @@ sub run_proxy {
 	die "Could not create listener socket: $!\n" unless $listenersock;
 	die "Could not create connection to server: $!\n" unless $targetsock;
 
-	# mark sockets as binary
-	binmode( $listenersock );
-	binmode( $targetsock );
-
 	my $sel = IO::Select->new($listenersock);
 	my %Handlers;
 	while (my @ready = $sel->can_read) {
@@ -156,6 +152,8 @@ sub run_proxy {
 	}
 }
 
+
+$ENV{LANG} = 'C'; # so we don't double-encode utf-8 if LANG is utf-8
 
 my $listenersock = IO::Socket::INET->new(
 	Listen => 5,
