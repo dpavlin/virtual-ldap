@@ -24,8 +24,22 @@ my $config = {
 	upstream_ldap => 'ldap.ffzg.hr',
 	upstream_ssl => 1,
 	overlay_prefix => 'ffzg-',
+	log_file => 'log',
 
 };
+
+my $log_fh;
+
+sub log {
+	open($log_fh, '>', $config->{log_file}) || die "can't open ", $config->{log_file},": $!";
+	$log_fh->autoflush(1);
+	print $log_fh join("\n", @_),"\n";
+}
+
+BEGIN {
+	$SIG{'__WARN__'} = sub { warn @_; main::log(@_); }
+}
+
 
 if ( ! -d $config->{yaml_dir} ) {
 	warn "DISABLE ", $config->{yaml_dir}," data overlay";
