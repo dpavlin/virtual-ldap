@@ -84,13 +84,21 @@ sub log_response {
 		my $uid = $response->{protocolOp}->{searchResEntry}->{objectName};
 		warn "## SEARCH $uid";
 
-if(0) {
+		my @attrs;
+
 		map {
-			if ( $_->{type} eq 'postalAddress' ) {
-				$_->{vals} = [ 'foobar' ];
+			if ( $_->{type} eq 'hrEduPersonUniqueNumber' ) {
+				foreach my $val ( @{ $_->{vals} } ) {
+					next if $val !~ m{.+:.+};
+					my ( $n, $v ) = split(/\s*:\s*/, $val );
+					push @attrs, { type => $_->{type} . '_' . $n, vals => [ $v ] };
+				}
 			}
 		} @{ $response->{protocolOp}->{searchResEntry}->{attributes} };
-}
+
+		warn "# ++ attrs ",dump( @attrs );
+
+		push @{ $response->{protocolOp}->{searchResEntry}->{attributes} }, $_ foreach @attrs;
 
 		my $path = $config->{yaml_dir} . "$uid.yaml";
 		if ( -e $path ) {
