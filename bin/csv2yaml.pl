@@ -50,7 +50,7 @@ foreach my $line ( split(/\r?\n/, $csv) ) {
 		$v =~ s[\x{17d}][F] if $n =~ m{spol};
 
 		if ( $v =~ m{#} ) {
-			my @v = split(/\s*#\s*/, $v);
+			my @v = split(/\s*#+\s*/, $v);
 			foreach my $pos ( 0 .. $#v ) {
 				if ( $n =~ m{tel} ) {
 					if ( $v[$pos] =~ m{^09} ) {
