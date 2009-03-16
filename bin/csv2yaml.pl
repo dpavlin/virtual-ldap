@@ -11,14 +11,14 @@ use Data::Dump qw/dump/;
 use File::Slurp;
 use YAML qw/DumpFile/;
 use Text::CSV;
-use Encode qw/decode/;
+use Encode qw/from_to/;
 
 my $debug = 0;
 
 my $path = shift @ARGV || die "usage: $0 file.csv\n";
 
 my $csv = read_file( $path );
-$csv = decode('utf-16', $csv);
+from_to($csv, 'utf-16', 'utf-8');
 
 my @columns;
 
