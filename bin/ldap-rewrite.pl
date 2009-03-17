@@ -20,7 +20,7 @@ use YAML qw/LoadFile/;
 
 my $config = {
 	yaml_dir => './yaml/',
-	listen => 'localhost:2389',
+	listen => 'localhost:1389',
 	upstream_ldap => 'ldap.ffzg.hr',
 	upstream_ssl => 1,
 	overlay_prefix => 'ffzg-',
@@ -177,7 +177,7 @@ my $listenersock = IO::Socket::INET->new(
 	Proto => 'tcp',
 	Reuse => 1,
 	LocalAddr => $config->{listen},
-);
+) || die "can't open listen socket: $!";
 
 
 my $targetsock = $config->{upstream_ssl}
@@ -187,7 +187,10 @@ my $targetsock = $config->{upstream_ssl}
 		PeerPort => 389,
 	)
 	: IO::Socket::SSL->new( $config->{upstream_ldap} . ':ldaps')
-	;
+	|| die "can't open upstream socket: $!";
+
+binmode( $listenersock );
+binmode( $targetsock );
 
 run_proxy($listenersock,$targetsock);
 
