@@ -170,8 +170,6 @@ sub run_proxy {
 }
 
 
-$ENV{LANG} = 'C'; # so we don't double-encode utf-8 if LANG is utf-8
-
 my $listenersock = IO::Socket::INET->new(
 	Listen => 5,
 	Proto => 'tcp',
@@ -188,9 +186,6 @@ my $targetsock = $config->{upstream_ssl}
 	)
 	: IO::Socket::SSL->new( $config->{upstream_ldap} . ':ldaps')
 	|| die "can't open upstream socket: $!";
-
-binmode( $listenersock );
-binmode( $targetsock );
 
 run_proxy($listenersock,$targetsock);
 
