@@ -20,7 +20,7 @@ use YAML qw/LoadFile/;
 
 my $config = {
 	yaml_dir => './yaml/',
-	listen => 'localhost:1389',
+	listen => 'localhost:2389',
 	upstream_ldap => 'ldap.ffzg.hr',
 	upstream_ssl => 1,
 	overlay_prefix => 'ffzg-',
@@ -31,7 +31,10 @@ my $config = {
 my $log_fh;
 
 sub log {
-	open($log_fh, '>', $config->{log_file}) || die "can't open ", $config->{log_file},": $!";
+	if ( ! $log_fh ) {
+		open($log_fh, '>>', $config->{log_file}) || die "can't open ", $config->{log_file},": $!";
+		print $log_fh "# " . time;
+	}
 	$log_fh->autoflush(1);
 	print $log_fh join("\n", @_),"\n";
 }
@@ -77,21 +80,21 @@ sub handle {
 sub log_request {
 	my $pdu=shift;
 
-	print '-' x 80,"\n";
-	print "Request ASN 1:\n";
-	Convert::ASN1::asn_hexdump(\*STDOUT,$pdu);
-	print "Request Perl:\n";
+#	print '-' x 80,"\n";
+#	print "Request ASN 1:\n";
+#	Convert::ASN1::asn_hexdump(\*STDOUT,$pdu);
+#	print "Request Perl:\n";
 	my $request = $LDAPRequest->decode($pdu);
-	print dump($request);
+	warn "## request = ",dump($request);
 }
 
 sub log_response {
 	my $pdu=shift;
 
-	print '-' x 80,"\n";
-	print "Response ASN 1:\n";
-	Convert::ASN1::asn_hexdump(\*STDOUT,$pdu);
-	print "Response Perl:\n";
+#	print '-' x 80,"\n";
+#	print "Response ASN 1:\n";
+#	Convert::ASN1::asn_hexdump(\*STDOUT,$pdu);
+#	print "Response Perl:\n";
 	my $response = $LDAPResponse->decode($pdu);
 
 	if ( defined $response->{protocolOp}->{searchResEntry} ) {
@@ -133,7 +136,7 @@ sub log_response {
 		$pdu = $LDAPResponse->encode($response);
 	}
 
-	print dump($response);
+	warn "## response = ", dump($response);
 
 	return $pdu;
 }
