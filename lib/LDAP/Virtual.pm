@@ -43,11 +43,6 @@ Provide LDAP server functionality somewhat similar to C<slapo-rwm>
 =cut
 
 our $pids;
-our $cache;
-
-sub cache {
-	return $cache;
-}
 
 sub run {
 	my $self = shift;
@@ -242,10 +237,8 @@ sub search {
 
 	warn "## entries = ",dump( @entries );
 
-#	$self->cache->write_cache( \@entries, uri_escape( $filter ));
-
-	my $path = uri_escape( $filter );
-	DumpFile( "var/${path}.yml", \@entries );
+	my $path = 'var/' . uri_escape( $filter ) . '.yml';
+	DumpFile( $path, \@entries );
 	warn "# created $path ", -s $path, " bytes";
 
 	return RESULT_OK, @entries;
