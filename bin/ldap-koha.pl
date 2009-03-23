@@ -8,16 +8,16 @@ use IO::Socket;
 use lib 'lib';
 use LDAP::Koha;
 
-my $port = 2389;
+my $listen = '10.60.0.13:2389';
 
 my $sock = IO::Socket::INET->new(
 	Listen => 5,
 	Proto => 'tcp',
 	Reuse => 1,
-	LocalPort => $port,
+	LocalAddr => $listen,
 ) || die;
 
-warn "# listening on $port";
+warn "# listening on $listen";
 
 my $sel = IO::Select->new($sock);
 my %Handlers;
