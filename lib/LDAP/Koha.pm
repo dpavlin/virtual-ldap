@@ -34,6 +34,11 @@ my $sth = $dbh->prepare(q{
 		userid			as uid,
 		firstname		as givenName,
 		surname			as sn,
+		concat(
+			firstname,
+			' ',
+			surname
+		)				as cn,
 		cardnumber		as otherPager,
 		email			as mail
 	from borrowers
