@@ -26,6 +26,9 @@ require 'config.pl' if -e 'config.pl';
 
 my $dbh = DBI->connect($dsn . $database, $user,$passwd, { RaiseError => 1, AutoCommit => 0 }) || die $DBI::errstr;
 
+# Net::LDAP::Entry will lc all our attribute names anyway, so
+# we don't really care about correctCapitalization for LDAP
+# attributes which won't pass through DBI
 my $sth = $dbh->prepare(q{
 	select
 		userid			as uid,
