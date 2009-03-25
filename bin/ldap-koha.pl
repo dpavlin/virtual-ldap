@@ -8,14 +8,14 @@ use IO::Socket;
 use lib 'lib';
 use LDAP::Koha;
 
-my $listen = '10.60.0.13:2389';
+my $listen = shift @ARGV || 'localhost:2389';
 
 my $sock = IO::Socket::INET->new(
 	Listen => 5,
 	Proto => 'tcp',
 	Reuse => 1,
 	LocalAddr => $listen,
-) || die;
+) || die "can't listen to $listen $!";
 
 warn "# listening on $listen";
 

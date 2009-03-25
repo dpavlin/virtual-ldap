@@ -20,7 +20,7 @@ use YAML qw/LoadFile/;
 
 my $config = {
 	yaml_dir => './yaml/',
-	listen => 'localhost:1389',
+	listen => shift @ARGV || 'localhost:1389',
 	upstream_ldap => 'ldap.ffzg.hr',
 	upstream_ssl => 1,
 	overlay_prefix => 'ffzg-',
@@ -99,7 +99,7 @@ sub log_response {
 
 	if ( defined $response->{protocolOp}->{searchResEntry} ) {
 		my $uid = $response->{protocolOp}->{searchResEntry}->{objectName};
-		warn "## SEARCH $uid";
+		warn "## objectName $uid";
 
 		my @attrs;
 
