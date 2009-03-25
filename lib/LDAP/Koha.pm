@@ -22,7 +22,7 @@ our $database = 'koha';
 our $user     = 'unconfigured-user';
 our $passwd   = 'unconfigured-password';
 
-our $max_results = 3; # 100; # FIXME
+our $max_results = 10; # 100; # FIXME
 
 require 'config.pl' if -e 'config.pl';
 
@@ -34,24 +34,27 @@ my $dbh = DBI->connect($dsn . $database, $user,$passwd, { RaiseError => 1, AutoC
 my $sql_select = q{
 	select
 		trim(userid)					as uid,
-		firstname						as givenName,
-		surname							as sn,
-		concat(firstname,' ',surname)	as cn,
+		firstname					as givenName,
+		surname						as sn,
+		concat(firstname,' ',surname)			as cn,
 
 		-- SAFEQ specific mappings from UMgr-LDAP.conf
-		concat(firstname,' ',surname)	as displayName,
-		cardnumber						as otherPager,
-		email							as mail,
+		surname						as displayName,
+		cardnumber					as pager,
+		email						as mail,
 		categorycode					as organizationalUnit,
 		borrowernumber					as objectGUID,
-		concat('/home/',borrowernumber)	as homeDirectory
+		concat('/home/',borrowernumber)			as homeDirectory
 	from borrowers
 };
 
-# needed for where clause
-my $sql_ldap_mapping = {
-	'userid'			=> 'uid',
-	'borrowernumber'	=> 'objectGUID',
+# we need reverse LDAP -> SQL mapping for where clause
+my $ldap_sql_mapping = {
+	'uid'		=> 'userid',
+	'objectGUID'	=> 'borrowernumber',
+	'displayName'	=> 'surname',
+	'sn'		=> 'surname',
+	'pager'		=> 'cardnumber',
 };
 
 # attributes which are same for whole set, but somehow
@@ -60,11 +63,6 @@ my $sql_ldap_mapping = {
 my $ldap_ignore = {
 	'objectclass' => 1,
 };
-
-my $ldap_sql_mapping;
-while ( my ($sql,$ldap) = each %$sql_ldap_mapping ) {
-	$ldap_sql_mapping->{ $ldap } = $sql;
-}
 
 sub __sql_column {
 	my $name = shift;
@@ -93,6 +91,41 @@ sub bind {
 	return RESULT_OK;
 }
 
+our @values;
+our @limits;
+
+sub __ldap_search_to_sql {
+	my ( $how, $what ) = @_;
+	warn "### how $how\n";
+	if ( $how eq 'equalityMatch' && defined $what ) {
+		my $name = $what->{attributeDesc} || warn "ERROR: no attributeDesc?";
+		my $value = $what->{assertionValue} || warn "ERROR: no assertionValue?";
+		if ( ! $ldap_ignore->{ $name } ) {
+			push @limits, __sql_column($name) . ' = ?';
+			push @values, $value;
+		}
+	} elsif ( $how eq 'substrings' ) {
+		foreach my $substring ( @{ $what->{substrings} } ) {
+			my $name = $what->{type} || warn "ERROR: no type?";
+			while ( my($op,$value) = each %$substring ) {
+				push @limits, __sql_column($name) . ' LIKE ?';
+				if ( $op eq 'any' ) {
+					$value = '%' . $value . '%';
+				} else {
+					warn "UNSUPPORTED: op $op - using plain $value";
+				}
+				push @values, $value;
+			}
+		}
+	} elsif ( $how eq 'present' ) {
+		my $name = __sql_column( $what );
+		push @limits, "$name IS NOT NULL and length($name) > 1";
+		## XXX length(foo) > 1 to avoid empty " " strings
+	} else {
+		warn "UNSUPPORTED: how $how what ",dump( $what );
+	}
+}
+
 # the search operation
 sub search {
 	my $self = shift;
@@ -107,44 +140,21 @@ sub search {
 	if ( $reqData->{'filter'} ) {
 
 		my $sql_where = '';
-		my @values;
+		@values = ();
 
 		foreach my $join_with ( keys %{ $reqData->{'filter'} } ) {
 
 			warn "## join_with $join_with\n";
 
-			my @limits;
+			@limits = ();
 
 			foreach my $filter ( @{ $reqData->{'filter'}->{ $join_with } } ) {
 				warn "### filter ",dump($filter),$/;
 				foreach my $how ( keys %$filter ) {
-					warn "### how $how\n";
-					if ( $how eq 'equalityMatch' && defined $filter->{$how} ) {
-						my $name = $filter->{$how}->{attributeDesc} || warn "ERROR: no attributeDesc?";
-						my $value = $filter->{$how}->{assertionValue} || warn "ERROR: no assertionValue?";
-						if ( ! $ldap_ignore->{ $name } ) {
-								push @limits, __sql_column($name) . ' = ?';
-								push @values, $value;
-						}
-					} elsif ( $how eq 'substrings' ) {
-						foreach my $substring ( @{ $filter->{$how}->{substrings} } ) {
-							my $name = $filter->{$how}->{type} || warn "ERROR: no type?";
-							while ( my($op,$value) = each %$substring ) {
-								push @limits, __sql_column($name) . ' LIKE ?';
-								if ( $op eq 'any' ) {
-									$value = '%' . $value . '%';
-								} else {
-									warn "UNSUPPORTED: op $op - using plain $value";
-								}
-								push @values, $value;
-							}
-						}
-					} elsif ( $how eq 'present' ) {
-						my $name = __sql_column( $filter->{$how} );
-						push @limits, "$name IS NOT NULL and length($name) > 1";
-						## XXX length(foo) > 1 to avoid empty " " strings
+					if ( $how eq 'or' ) {
+						__ldap_search_to_sql( %$_ ) foreach ( @{ $filter->{$how} } );
 					} else {
-						warn "UNSUPPORTED: how $how ",dump( $filter );
+						__ldap_search_to_sql( $how, $filter->{$how} );
 					}
 					warn "## limits ",dump(@limits), " values ",dump(@values);
 				}
