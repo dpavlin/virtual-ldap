@@ -22,7 +22,7 @@ our $database = 'koha';
 our $user     = 'unconfigured-user';
 our $passwd   = 'unconfigured-password';
 
-our $max_results = 10; # 100; # FIXME
+our $max_results = 3; # 100; # FIXME
 
 require 'config.pl' if -e 'config.pl';
 
@@ -148,19 +148,25 @@ sub search {
 
 			@limits = ();
 
-			foreach my $filter ( @{ $reqData->{'filter'}->{ $join_with } } ) {
-				warn "### filter ",dump($filter),$/;
-				foreach my $how ( keys %$filter ) {
-					if ( $how eq 'or' ) {
-						__ldap_search_to_sql( %$_ ) foreach ( @{ $filter->{$how} } );
-					} else {
-						__ldap_search_to_sql( $how, $filter->{$how} );
-					}
-					warn "## limits ",dump(@limits), " values ",dump(@values);
-				}
-			}
+			if ( ref $reqData->{'filter'}->{ $join_with } ) {
 
-			$sql_where .= ' ' . join( " $join_with ", @limits );
+				foreach my $filter ( @{ $reqData->{'filter'}->{ $join_with } } ) {
+					warn "### filter ",dump($filter),$/;
+					foreach my $how ( keys %$filter ) {
+						if ( $how eq 'or' ) {
+							__ldap_search_to_sql( %$_ ) foreach ( @{ $filter->{$how} } );
+						} else {
+							__ldap_search_to_sql( $how, $filter->{$how} );
+						}
+						warn "## limits ",dump(@limits), " values ",dump(@values);
+					}
+				}
+
+				$sql_where .= ' ' . join( " $join_with ", @limits );
+
+			} else {
+				__ldap_search_to_sql( $join_with, $reqData->{'filter'}->{$join_with} );
+			}
 
 		}
 
@@ -180,12 +186,21 @@ sub search {
 
 			my $dn = 'uid=' . $row->{uid} || die "no uid";
 			$dn =~ s{[@\.]}{,dc=}g;
+			$dn .= ',' . $base unless $dn =~ m{dc}i;
 
 			my $entry = Net::LDAP::Entry->new;
-			$entry->dn( $dn . $base );
+			$entry->dn( $dn );
+			$entry->add( objectClass => [
+				"person",
+				"organizationalPerson",
+				"inetOrgPerson",
+				"hrEduPerson",
+			] );
 			$entry->add( %$row );
 
-			#warn "### entry ",dump( $entry );
+			#$entry->changetype( 'modify' );
+
+			warn "### entry ",$entry->dump( \*STDERR );
 
 			push @entries, $entry;
 		}
