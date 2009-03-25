@@ -33,22 +33,25 @@ my $dbh = DBI->connect($dsn . $database, $user,$passwd, { RaiseError => 1, AutoC
 # attributes which won't pass through DBI
 my $sql_select = q{
 	select
-		userid			as uid,
-		firstname		as givenName,
-		surname			as sn,
-		concat(
-			firstname,
-			' ',
-			surname
-		)				as cn,
-		cardnumber		as otherPager,
-		email			as mail
+		trim(userid)					as uid,
+		firstname						as givenName,
+		surname							as sn,
+		concat(firstname,' ',surname)	as cn,
+
+		-- SAFEQ specific mappings from UMgr-LDAP.conf
+		concat(firstname,' ',surname)	as displayName,
+		cardnumber						as otherPager,
+		email							as mail,
+		categorycode					as organizationalUnit,
+		borrowernumber					as objectGUID,
+		concat('/home/',borrowernumber)	as homeDirectory
 	from borrowers
 };
 
 # needed for where clause
 my $sql_ldap_mapping = {
-	'userid'	=> 'uid',
+	'userid'			=> 'uid',
+	'borrowernumber'	=> 'objectGUID',
 };
 
 # attributes which are same for whole set, but somehow
@@ -137,8 +140,9 @@ sub search {
 							}
 						}
 					} elsif ( $how eq 'present' ) {
-						push @limits, __sql_column( $filter->{$how} ) . ' IS NOT NULL';
-						## XXX add and length(foo) > 0 to avoid empty strings?
+						my $name = __sql_column( $filter->{$how} );
+						push @limits, "$name IS NOT NULL and length($name) > 1";
+						## XXX length(foo) > 1 to avoid empty " " strings
 					} else {
 						warn "UNSUPPORTED: how $how ",dump( $filter );
 					}
