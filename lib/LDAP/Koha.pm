@@ -22,6 +22,8 @@ our $database = 'koha';
 our $user     = 'unconfigured-user';
 our $passwd   = 'unconfigured-password';
 
+our $max_results = 3; # 100; # FIXME
+
 require 'config.pl' if -e 'config.pl';
 
 my $dbh = DBI->connect($dsn . $database, $user,$passwd, { RaiseError => 1, AutoCommit => 0 }) || die $DBI::errstr;
@@ -29,7 +31,7 @@ my $dbh = DBI->connect($dsn . $database, $user,$passwd, { RaiseError => 1, AutoC
 # Net::LDAP::Entry will lc all our attribute names anyway, so
 # we don't really care about correctCapitalization for LDAP
 # attributes which won't pass through DBI
-my $sth = $dbh->prepare(q{
+my $sql_select = q{
 	select
 		userid			as uid,
 		firstname		as givenName,
@@ -42,9 +44,29 @@ my $sth = $dbh->prepare(q{
 		cardnumber		as otherPager,
 		email			as mail
 	from borrowers
-	where
-		cardnumber = ?
-});
+};
+
+# needed for where clause
+my $sql_ldap_mapping = {
+	'userid'	=> 'uid',
+};
+
+# attributes which are same for whole set, but somehow
+# LDAP clients are sending they anyway and we don't
+# have them in database
+my $ldap_ignore = {
+	'objectclass' => 1,
+};
+
+my $ldap_sql_mapping;
+while ( my ($sql,$ldap) = each %$sql_ldap_mapping ) {
+	$ldap_sql_mapping->{ $ldap } = $sql;
+}
+
+sub __sql_column {
+	my $name = shift;
+	$ldap_sql_mapping->{$name} || $name;
+}
 
 use constant RESULT_OK => {
 	'matchedDN' => '',
@@ -74,18 +96,69 @@ sub search {
 	my $reqData = shift;
 	print "searching...\n";
 
-	warn "# request = ", dump($reqData);
+	warn "# " . localtime() . " request = ", dump($reqData);
 
 	my $base = $reqData->{'baseObject'}; # FIXME use it?
 
 	my @entries;
-	if ( $reqData->{'filter'}->{'equalityMatch'}->{'attributeDesc'} eq 'otherPager' ) {
+	if ( $reqData->{'filter'} ) {
 
-		my $value = $reqData->{'filter'}->{'equalityMatch'}->{'assertionValue'} || die "no value?";
+		my $sql_where = '';
+		my @values;
 
-		$sth->execute( $value );
+		foreach my $join_with ( keys %{ $reqData->{'filter'} } ) {
 
-		warn "# ", $sth->rows, " results for: $value\n";
+			warn "## join_with $join_with\n";
+
+			my @limits;
+
+			foreach my $filter ( @{ $reqData->{'filter'}->{ $join_with } } ) {
+				warn "### filter ",dump($filter),$/;
+				foreach my $how ( keys %$filter ) {
+					warn "### how $how\n";
+					if ( $how eq 'equalityMatch' && defined $filter->{$how} ) {
+						my $name = $filter->{$how}->{attributeDesc} || warn "ERROR: no attributeDesc?";
+						my $value = $filter->{$how}->{assertionValue} || warn "ERROR: no assertionValue?";
+						if ( ! $ldap_ignore->{ $name } ) {
+								push @limits, __sql_column($name) . ' = ?';
+								push @values, $value;
+						}
+					} elsif ( $how eq 'substrings' ) {
+						foreach my $substring ( @{ $filter->{$how}->{substrings} } ) {
+							my $name = $filter->{$how}->{type} || warn "ERROR: no type?";
+							while ( my($op,$value) = each %$substring ) {
+								push @limits, __sql_column($name) . ' LIKE ?';
+								if ( $op eq 'any' ) {
+									$value = '%' . $value . '%';
+								} else {
+									warn "UNSUPPORTED: op $op - using plain $value";
+								}
+								push @values, $value;
+							}
+						}
+					} elsif ( $how eq 'present' ) {
+						push @limits, __sql_column( $filter->{$how} ) . ' IS NOT NULL';
+						## XXX add and length(foo) > 0 to avoid empty strings?
+					} else {
+						warn "UNSUPPORTED: how $how ",dump( $filter );
+					}
+					warn "## limits ",dump(@limits), " values ",dump(@values);
+				}
+			}
+
+			$sql_where .= ' ' . join( " $join_with ", @limits );
+
+		}
+
+		if ( $sql_where ) {
+			$sql_where = " where $sql_where";
+		}
+
+		warn "# SQL:\n$sql_select $sql_where\n# DATA: ",dump( @values );
+		my $sth = $dbh->prepare( $sql_select . $sql_where . " LIMIT $max_results" ); # XXX remove limit?
+		$sth->execute( @values );
+
+		warn "# ", $sth->rows, " results for ",dump( $reqData->{'filter'} );
 
 		while (my $row = $sth->fetchrow_hashref) {
 
@@ -95,10 +168,10 @@ sub search {
 			$dn =~ s{[@\.]}{,dc=}g;
 
 			my $entry = Net::LDAP::Entry->new;
-			$entry->dn( $dn );
+			$entry->dn( $dn . $base );
 			$entry->add( %$row );
 
-			#warn "## entry ",dump( $entry );
+			#warn "### entry ",dump( $entry );
 
 			push @entries, $entry;
 		}
