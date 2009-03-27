@@ -22,7 +22,7 @@ our $database = 'koha';
 our $user     = 'unconfigured-user';
 our $passwd   = 'unconfigured-password';
 
-our $max_results = 3; # 100; # FIXME
+our $max_results = 10; # 100; # FIXME
 
 require 'config.pl' if -e 'config.pl';
 
@@ -40,7 +40,7 @@ my $sql_select = q{
 
 		-- SAFEQ specific mappings from UMgr-LDAP.conf
 		surname						as displayName,
-		cardnumber					as pager,
+		rfid_sid					as pager,
 		email						as mail,
 		categorycode					as organizationalUnit,
 		borrowernumber					as objectGUID,
@@ -54,7 +54,7 @@ my $ldap_sql_mapping = {
 	'objectGUID'	=> 'borrowernumber',
 	'displayName'	=> 'surname',
 	'sn'		=> 'surname',
-	'pager'		=> 'cardnumber',
+	'pager'		=> 'rfid_sid',
 };
 
 # attributes which are same for whole set, but somehow
