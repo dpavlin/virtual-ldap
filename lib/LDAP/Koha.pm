@@ -26,7 +26,7 @@ our $max_results = 10; # 100; # FIXME
 
 require 'config.pl' if -e 'config.pl';
 
-my $dbh = DBI->connect($dsn . $database, $user,$passwd, { RaiseError => 1, AutoCommit => 0 }) || die $DBI::errstr;
+my $dbh = DBI->connect($dsn . $database, $user,$passwd, { RaiseError => 1, AutoCommit => 1 }) || die $DBI::errstr;
 
 # Net::LDAP::Entry will lc all our attribute names anyway, so
 # we don't really care about correctCapitalization for LDAP
