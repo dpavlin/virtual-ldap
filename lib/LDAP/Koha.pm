@@ -147,15 +147,15 @@ sub search {
 		my $sql_where = '';
 		@values = ();
 
-		foreach my $join_with ( keys %{ $reqData->{'filter'} } ) {
+		foreach my $filter ( keys %{ $reqData->{'filter'} } ) {
 
-			warn "## join_with $join_with ", dump( $reqData->{'filter'}->{ $join_with } ), "\n";
+			warn "## filter $filter ", dump( $reqData->{'filter'}->{ $filter } ), "\n";
 
 			@limits = ();
 
-			if ( ref $reqData->{'filter'}->{ $join_with } eq 'ARRAY' ) {
+			if ( ref $reqData->{'filter'}->{ $filter } eq 'ARRAY' ) {
 
-				foreach my $filter ( @{ $reqData->{'filter'}->{ $join_with } } ) {
+				foreach my $filter ( @{ $reqData->{'filter'}->{ $filter } } ) {
 					warn "### filter ",dump($filter),$/;
 					foreach my $how ( keys %$filter ) {
 						if ( $how eq 'or' ) {
@@ -167,10 +167,10 @@ sub search {
 					}
 				}
 
-				$sql_where .= ' ' . join( " $join_with ", @limits );
+				$sql_where .= ' ' . join( " $filter ", @limits );
 
 			} else {
-				__ldap_search_to_sql( $join_with, $reqData->{'filter'}->{$join_with} );
+				__ldap_search_to_sql( $filter, $reqData->{'filter'}->{$filter} );
 			}
 
 		}
