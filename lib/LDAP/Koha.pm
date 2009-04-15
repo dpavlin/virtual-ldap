@@ -22,7 +22,14 @@ our $database = 'koha';
 our $user     = 'unconfigured-user';
 our $passwd   = 'unconfigured-password';
 
-our $max_results = 10; # 100; # FIXME
+our $max_results = 3; # 100; # FIXME
+
+our $objectclass = 'HrEduPerson';
+
+$SIG{__DIE__} = sub {
+	warn "!!! DIE ", @_;
+	die @_;
+};
 
 require 'config.pl' if -e 'config.pl';
 
@@ -31,14 +38,24 @@ my $dbh = DBI->connect($dsn . $database, $user,$passwd, { RaiseError => 1, AutoC
 # Net::LDAP::Entry will lc all our attribute names anyway, so
 # we don't really care about correctCapitalization for LDAP
 # attributes which won't pass through DBI
-my $sql_select = q{
+my $objectclass_sql = {
+
+HrEduPerson => q{
+
 	select
+		concat('uid=',trim(userid),',dc=ffzg,dc=hr')	as dn,
+		'person
+		organizationalPerson
+		inetOrgPerson
+		hrEduPerson'					as objectClass,
+
 		trim(userid)					as uid,
 		firstname					as givenName,
 		surname						as sn,
 		concat(firstname,' ',surname)			as cn,
 
 		-- SAFEQ specific mappings from UMgr-LDAP.conf
+		cardnumber					as objectGUID,
 		surname						as displayName,
 		rfid_sid					as pager,
 		email						as mail,
@@ -46,9 +63,25 @@ my $sql_select = q{
 		categorycode					as organizationalUnit,
 		categorycode					as memberOf,
 		categorycode					as department,
-		borrowernumber					as objectGUID,
 		concat('/home/',borrowernumber)			as homeDirectory
 	from borrowers
+
+},
+
+organizationalUnit => q{
+
+	select
+		concat('ou=',categorycode)			as dn,
+		'organizationalUnit
+		top'						as objectClass,
+
+		hex(md5(categorycode)) % 10000			as objectGUID,
+
+		categorycode					as ou,
+		description					as displayName
+	from categories
+
+},
 };
 
 # we need reverse LDAP -> SQL mapping for where clause
@@ -58,13 +91,6 @@ my $ldap_sql_mapping = {
 	'displayName'	=> 'surname',
 	'sn'		=> 'surname',
 	'pager'		=> 'rfid_sid',
-};
-
-# attributes which are same for whole set, but somehow
-# LDAP clients are sending they anyway and we don't
-# have them in database
-my $ldap_ignore = {
-	'objectclass' => 1,
 };
 
 sub __sql_column {
@@ -103,11 +129,12 @@ sub __ldap_search_to_sql {
 	if ( $how eq 'equalityMatch' && defined $what ) {
 		my $name = $what->{attributeDesc} || warn "ERROR: no attributeDesc?";
 		my $value = $what->{assertionValue} || warn "ERROR: no assertionValue?";
-		if ( ! $ldap_ignore->{ $name } ) {
+
+		if ( lc $name eq 'objectclass' ) {
+			$objectclass = $value;
+		} else {
 			push @limits, __sql_column($name) . ' = ?';
 			push @values, $value;
-		} else {
-			warn "IGNORED: $name = $value";
 		}
 	} elsif ( $how eq 'substrings' ) {
 		foreach my $substring ( @{ $what->{substrings} } ) {
@@ -179,6 +206,8 @@ sub search {
 			$sql_where = " where $sql_where";
 		}
 
+		my $sql_select = $objectclass_sql->{ $objectclass } || die "can't find SQL query for $objectclass";
+
 		warn "# SQL:\n$sql_select\n$sql_where\n# DATA: ",dump( @values );
 		my $sth = $dbh->prepare( $sql_select . $sql_where . " LIMIT $max_results" ); # XXX remove limit?
 		$sth->execute( @values );
@@ -187,20 +216,16 @@ sub search {
 
 		while (my $row = $sth->fetchrow_hashref) {
 
+			die "no objectClass column in $sql_select" unless defined $row->{objectClass};
+
+			$row->{objectClass} = [ split(/\s+/, $row->{objectClass}) ] if $row->{objectClass} =~ m{\n};
+
 			warn "## row = ",dump( $row );
 
-			my $dn = 'uid=' . $row->{uid} || die "no uid";
-			$dn =~ s{[@\.]}{,dc=}g;
-			$dn .= ',' . $base unless $dn =~ m{dc}i;
+			my $dn = delete( $row->{dn} ) || die "no dn in $sql_select";
 
 			my $entry = Net::LDAP::Entry->new;
 			$entry->dn( $dn );
-			$entry->add( objectClass => [
-				"person",
-				"organizationalPerson",
-				"inetOrgPerson",
-				"hrEduPerson",
-			] );
 			$entry->add( %$row );
 
 			#$entry->changetype( 'modify' );
