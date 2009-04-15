@@ -42,7 +42,10 @@ my $sql_select = q{
 		surname						as displayName,
 		rfid_sid					as pager,
 		email						as mail,
+		categorycode					as ou,
 		categorycode					as organizationalUnit,
+		categorycode					as memberOf,
+		categorycode					as department,
 		borrowernumber					as objectGUID,
 		concat('/home/',borrowernumber)			as homeDirectory
 	from borrowers
@@ -96,13 +99,15 @@ our @limits;
 
 sub __ldap_search_to_sql {
 	my ( $how, $what ) = @_;
-	warn "### how $how\n";
+	warn "### __ldap_search_to_sql $how ",dump( $what ),"\n";
 	if ( $how eq 'equalityMatch' && defined $what ) {
 		my $name = $what->{attributeDesc} || warn "ERROR: no attributeDesc?";
 		my $value = $what->{assertionValue} || warn "ERROR: no assertionValue?";
 		if ( ! $ldap_ignore->{ $name } ) {
 			push @limits, __sql_column($name) . ' = ?';
 			push @values, $value;
+		} else {
+			warn "IGNORED: $name = $value";
 		}
 	} elsif ( $how eq 'substrings' ) {
 		foreach my $substring ( @{ $what->{substrings} } ) {
@@ -122,7 +127,7 @@ sub __ldap_search_to_sql {
 		push @limits, "$name IS NOT NULL and length($name) > 1";
 		## XXX length(foo) > 1 to avoid empty " " strings
 	} else {
-		warn "UNSUPPORTED: how $how what ",dump( $what );
+		warn "UNSUPPORTED: $how ",dump( $what );
 	}
 }
 
@@ -144,11 +149,11 @@ sub search {
 
 		foreach my $join_with ( keys %{ $reqData->{'filter'} } ) {
 
-			warn "## join_with $join_with\n";
+			warn "## join_with $join_with ", dump( $reqData->{'filter'}->{ $join_with } ), "\n";
 
 			@limits = ();
 
-			if ( ref $reqData->{'filter'}->{ $join_with } ) {
+			if ( ref $reqData->{'filter'}->{ $join_with } eq 'ARRAY' ) {
 
 				foreach my $filter ( @{ $reqData->{'filter'}->{ $join_with } } ) {
 					warn "### filter ",dump($filter),$/;
@@ -174,7 +179,7 @@ sub search {
 			$sql_where = " where $sql_where";
 		}
 
-		warn "# SQL:\n$sql_select $sql_where\n# DATA: ",dump( @values );
+		warn "# SQL:\n$sql_select\n$sql_where\n# DATA: ",dump( @values );
 		my $sth = $dbh->prepare( $sql_select . $sql_where . " LIMIT $max_results" ); # XXX remove limit?
 		$sth->execute( @values );
 
