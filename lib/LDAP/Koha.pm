@@ -25,7 +25,7 @@ our $database = 'koha';
 our $user     = 'unconfigured-user';
 our $passwd   = 'unconfigured-password';
 
-our $max_results = 15; # 100; # FIXME
+our $max_results = 1500; # 100; # FIXME
 
 our $objectclass = 'HrEduPerson';
 
@@ -197,20 +197,44 @@ sub search {
 
 		warn "# ", $sth->rows, " results for ",dump( $reqData->{'filter'} );
 
+		my $last_dn = '?';
+		my $entry;
+
 		while (my $row = $sth->fetchrow_hashref) {
 
 			my ( $dn, $attributes ) = _dn_attributes( $row, $base );
 
-			my $entry = Net::LDAP::Entry->new;
-			$entry->dn( $dn );
-			$entry->add( %$attributes );
+			warn "# dn $last_dn ... $dn\n";
 
-			#$entry->changetype( 'modify' );
+			if ( $dn ne $last_dn ) {
 
-			warn "### entry ",$entry->dump( \*STDERR );
+				if ( $entry ) {
+					#$entry->changetype( 'modify' );
+					warn "### entry ",$entry->dump( \*STDERR );
+					push @entries, $entry;
+					undef $entry;
+				}
 
-			push @entries, $entry;
+				$entry = Net::LDAP::Entry->new;
+				$entry->dn( $dn );
+
+				$entry->add( %$attributes );
+
+			} else {
+				foreach my $n ( keys %$attributes ) {
+					my $v = $attributes->{$n};
+					warn "# attr $n = $v\n";
+					$entry->add( $n, $v ) if $entry->get_value( $n ) ne $v;
+				}
+			}
+
+
+			$last_dn = $dn;
+
 		}
+
+		warn "### last entry ",$entry->dump( \*STDERR );
+		push @entries, $entry;
 
 	} else {
 		warn "UNKNOWN request: ",dump( $reqData );
