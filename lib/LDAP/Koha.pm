@@ -2,15 +2,18 @@ package LDAP::Koha;
 
 use strict;
 use warnings;
-use Data::Dump qw/dump/;
 
 use lib '../lib';
+
 use Net::LDAP::Constant qw(LDAP_SUCCESS);
 use Net::LDAP::Server;
 use base 'Net::LDAP::Server';
 use fields qw();
 
 use DBI;
+use File::Slurp;
+
+use Data::Dump qw/dump/;
 
 # XXX test with:
 #
@@ -22,7 +25,7 @@ our $database = 'koha';
 our $user     = 'unconfigured-user';
 our $passwd   = 'unconfigured-password';
 
-our $max_results = 3; # 100; # FIXME
+our $max_results = 15; # 100; # FIXME
 
 our $objectclass = 'HrEduPerson';
 
@@ -35,56 +38,8 @@ require 'config.pl' if -e 'config.pl';
 
 my $dbh = DBI->connect($dsn . $database, $user,$passwd, { RaiseError => 1, AutoCommit => 1 }) || die $DBI::errstr;
 
-# Net::LDAP::Entry will lc all our attribute names anyway, so
-# we don't really care about correctCapitalization for LDAP
-# attributes which won't pass through DBI
-my $objectclass_sql = {
-
-HrEduPerson => q{
-
-	select
-		concat('uid=',trim(userid),',dc=ffzg,dc=hr')	as dn,
-		'person
-		organizationalPerson
-		inetOrgPerson
-		hrEduPerson'					as objectClass,
-
-		trim(userid)					as uid,
-		firstname					as givenName,
-		surname						as sn,
-		concat(firstname,' ',surname)			as cn,
-
-		-- SAFEQ specific mappings from UMgr-LDAP.conf
-		cardnumber					as objectGUID,
-		surname						as displayName,
-		rfid_sid					as pager,
-		email						as mail,
-		categorycode					as ou,
-		categorycode					as organizationalUnit,
-		categorycode					as memberOf,
-		categorycode					as department,
-		concat('/home/',borrowernumber)			as homeDirectory
-	from borrowers
-
-},
-
-organizationalUnit => q{
-
-	select
-		concat('ou=',categorycode)			as dn,
-		'organizationalUnit
-		top'						as objectClass,
-
-		hex(md5(categorycode)) % 10000			as objectGUID,
-
-		categorycode					as ou,
-		description					as displayName
-	from categories
-
-},
-};
-
 # we need reverse LDAP -> SQL mapping for where clause
+
 my $ldap_sql_mapping = {
 	'uid'		=> 'userid',
 	'objectGUID'	=> 'borrowernumber',
@@ -158,6 +113,34 @@ sub __ldap_search_to_sql {
 	}
 }
 
+
+# my ( $dn,$attributes ) = _dn_attributes( $row, $base );
+
+sub _dn_attributes {
+	my ($row,$base) = @_;
+
+	warn "## row = ",dump( $row );
+
+	die "no objectClass column in ",dump( $row ) unless defined $row->{objectClass};
+
+	$row->{objectClass} = [ split(/\s+/, $row->{objectClass}) ] if $row->{objectClass} =~ m{\n};
+
+	warn "## row = ",dump( $row );
+
+	my $dn = delete( $row->{dn} ) || die "no dn in ",dump( $row );
+
+	# this does some sanity cleanup for our data
+	my $base_as_domain = $base;
+	$base_as_domain =~ s{dn=}{.};
+	$base_as_domain =~ s{^\.}{@};
+	$dn =~ s{$base_as_domain$}{};
+
+	$dn .= ',' . $base unless $dn =~ m{,}; # add base if none present
+
+	return ($dn, $row);
+}
+
+
 # the search operation
 sub search {
 	my $self = shift;
@@ -206,9 +189,9 @@ sub search {
 			$sql_where = " where $sql_where";
 		}
 
-		my $sql_select = $objectclass_sql->{ $objectclass } || die "can't find SQL query for $objectclass";
+		my $sql_select = read_file( lc "sql/$objectclass.sql" );
 
-		warn "# SQL:\n$sql_select\n$sql_where\n# DATA: ",dump( @values );
+		warn "# SQL:\n$sql_select\n", $sql_where ? $sql_where : '-- no where', "\n# DATA: ",dump( @values );
 		my $sth = $dbh->prepare( $sql_select . $sql_where . " LIMIT $max_results" ); # XXX remove limit?
 		$sth->execute( @values );
 
@@ -216,17 +199,11 @@ sub search {
 
 		while (my $row = $sth->fetchrow_hashref) {
 
-			die "no objectClass column in $sql_select" unless defined $row->{objectClass};
-
-			$row->{objectClass} = [ split(/\s+/, $row->{objectClass}) ] if $row->{objectClass} =~ m{\n};
-
-			warn "## row = ",dump( $row );
-
-			my $dn = delete( $row->{dn} ) || die "no dn in $sql_select";
+			my ( $dn, $attributes ) = _dn_attributes( $row, $base );
 
 			my $entry = Net::LDAP::Entry->new;
 			$entry->dn( $dn );
-			$entry->add( %$row );
+			$entry->add( %$attributes );
 
 			#$entry->changetype( 'modify' );
 
