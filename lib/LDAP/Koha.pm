@@ -25,7 +25,7 @@ our $database = 'koha';
 our $user     = 'unconfigured-user';
 our $passwd   = 'unconfigured-password';
 
-our $max_results = 1500; # 100; # FIXME
+our $max_results = 3000; # FIXME must be enough for all users
 
 our $objectclass = 'HrEduPerson';
 
@@ -177,11 +177,11 @@ sub search {
 					}
 				}
 
-				$sql_where .= ' ' . join( " $filter ", @limits );
-
 			} else {
 				__ldap_search_to_sql( $filter, $reqData->{'filter'}->{$filter} );
 			}
+
+			$sql_where .= ' ' . join( " $filter ", @limits );
 
 		}
 
