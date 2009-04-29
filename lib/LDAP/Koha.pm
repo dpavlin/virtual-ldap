@@ -26,8 +26,9 @@ our $user     = 'unconfigured-user';
 our $passwd   = 'unconfigured-password';
 
 our $max_results = 3000; # FIXME must be enough for all users
+our $objectclass_default = 'hrEduPerson';
 
-our $objectclass = 'HrEduPerson';
+our $objectclass;
 
 $SIG{__DIE__} = sub {
 	warn "!!! DIE ", @_;
@@ -156,6 +157,7 @@ sub search {
 
 		my $sql_where = '';
 		@values = ();
+		$objectclass = '';
 
 		foreach my $filter ( keys %{ $reqData->{'filter'} } ) {
 
@@ -184,6 +186,8 @@ sub search {
 			$sql_where .= ' ' . join( " $filter ", @limits ) if @limits;
 
 		}
+
+		$objectclass ||= $objectclass_default;
 
 		my $sql_select = read_file( lc "sql/$objectclass.sql" );
 		if ( $sql_where ) {
