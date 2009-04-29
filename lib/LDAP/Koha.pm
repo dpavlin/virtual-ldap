@@ -181,15 +181,19 @@ sub search {
 				__ldap_search_to_sql( $filter, $reqData->{'filter'}->{$filter} );
 			}
 
-			$sql_where .= ' ' . join( " $filter ", @limits );
+			$sql_where .= ' ' . join( " $filter ", @limits ) if @limits;
 
-		}
-
-		if ( $sql_where ) {
-			$sql_where = " where $sql_where";
 		}
 
 		my $sql_select = read_file( lc "sql/$objectclass.sql" );
+		if ( $sql_where ) {
+			if ( $sql_select !~ m{where}i ) {
+				$sql_where = " where $sql_where";
+			} else {
+				$sql_where = " and $sql_where";
+			}
+		}
+
 
 		warn "# SQL:\n$sql_select\n", $sql_where ? $sql_where : '-- no where', "\n# DATA: ",dump( @values );
 		my $sth = $dbh->prepare( $sql_select . $sql_where . " LIMIT $max_results" ); # XXX remove limit?
