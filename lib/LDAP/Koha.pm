@@ -247,8 +247,10 @@ sub search {
 
 		}
 
-		warn "### last entry ",$entry->dump( \*STDERR );
-		push @entries, $entry;
+		if ( $entry ) {
+			warn "### last entry ",$entry->dump( \*STDERR );
+			push @entries, $entry;
+		}
 
 	} else {
 		warn "UNKNOWN request: ",dump( $reqData );
