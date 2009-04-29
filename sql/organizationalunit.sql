@@ -1,7 +1,8 @@
 
 select
-	'ou=groups'			as dn,
+	concat('ou=',c.categorycode,'dc=ffzg,dc=hr')	as dn,
 	'organizationalunit'		as objectClass,
-	'groups'			as ou,
-	'Groups from Koha'		as description
+	c.categorycode			as ou,
+	c.description			as description
+from categories c
 

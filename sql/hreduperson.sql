@@ -16,8 +16,8 @@ select
 	surname						as displayName,
 	rfid_sid					as pager,
 	email						as mail,
---	categorycode					as memberOf,
-	categorycode					as department,
+	categorycode					as memberOf,
+	categorycode					as ou,
 	concat('/home/',borrowernumber)			as homeDirectory
 from borrowers
 

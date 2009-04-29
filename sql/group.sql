@@ -1,5 +1,5 @@
 select
-	concat('cn=',c.categorycode,',ou=groups')	as dn,
+	concat('cn=',c.categorycode,',ou=',c.categorycode)	as dn,
 	'group'				as objectClass,
 	'groups'			as ou,
 	c.categorycode			as cn,
