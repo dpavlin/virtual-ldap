@@ -25,7 +25,7 @@ our $database = 'koha';
 our $user     = 'unconfigured-user';
 our $passwd   = 'unconfigured-password';
 
-our $max_results = 3000; # FIXME must be enough for all users
+our $max_results = $ENV{MAX_RESULTS} || 3000; # FIXME must be enough for all users
 our $objectclass_default = 'hrEduPerson';
 
 our $objectclass;
@@ -199,8 +199,14 @@ sub search {
 		}
 
 
-		warn "# SQL:\n$sql_select\n", $sql_where ? $sql_where : '-- no where', "\n# DATA: ",dump( @values );
-		my $sth = $dbh->prepare( $sql_select . $sql_where . " LIMIT $max_results" ); # XXX remove limit?
+		my $sql
+			= $sql_select
+			. $sql_where
+			. ( $objectclass =~ m{person}i ? " LIMIT $max_results" : '' ) # add limit just for persons
+			;
+
+		warn "# SQL:\n$sql\n# DATA: ",dump( @values );
+		my $sth = $dbh->prepare( $sql );
 		$sth->execute( @values );
 
 		warn "# ", $sth->rows, " results for ",dump( $reqData->{'filter'} );
