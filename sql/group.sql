@@ -1,7 +1,7 @@
 select
-	concat('cn=',c.categorycode,',ou=',c.categorycode)	as dn,
+	concat('cn=',c.categorycode,',ou=',c.categorycode,',dc=ffzg,dc=hr')	as dn,
 	'group'				as objectClass,
-	'groups'			as ou,
+	c.categorycode			as ou,
 	c.categorycode			as cn,
 	description			as description,
 

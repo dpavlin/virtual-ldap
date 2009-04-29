@@ -131,12 +131,12 @@ sub _dn_attributes {
 	my $dn = delete( $row->{dn} ) || die "no dn in ",dump( $row );
 
 	# this does some sanity cleanup for our data
-	my $base_as_domain = $base;
-	$base_as_domain =~ s{dn=}{.};
-	$base_as_domain =~ s{^\.}{@};
-	$dn =~ s{$base_as_domain$}{};
-
-	$dn .= ',' . $base unless $dn =~ m{,}; # add base if none present
+#	my $base_as_domain = $base;
+#	$base_as_domain =~ s{dn=}{.};
+#	$base_as_domain =~ s{^\.}{@};
+#	$dn =~ s{$base_as_domain$}{};
+#
+#	$dn .= ',' . $base unless $dn =~ m{,}; # add base if none present
 
 	return ($dn, $row);
 }

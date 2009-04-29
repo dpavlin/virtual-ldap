@@ -1,6 +1,6 @@
 
 select
-	concat('uid=',trim(userid))			as dn,
+	concat('uid=',trim(userid),',ou=',categorycode,',dc=ffzg,dc=hr')	as dn,
 	'person
 	organizationalPerson
 	inetOrgPerson
