@@ -18,6 +18,7 @@ select
 	email						as mail,
 	categorycode					as memberOf,
 	categorycode					as ou,
+	categorycode					as department,
 	concat('/home/',borrowernumber)			as homeDirectory
 from borrowers
 
