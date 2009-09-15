@@ -229,6 +229,8 @@ sub search {
 					undef $entry;
 				}
 
+				$dn =~ s{@[^,]+}{};
+
 				$entry = Net::LDAP::Entry->new;
 				$entry->dn( $dn );
 
