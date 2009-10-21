@@ -156,6 +156,14 @@ sub bind {
 
 	my $bind;
 	$bind->{dn} = $req->{name} if $req->{name};
+
+	if ( $bind->{dn} =~ m{@} ) {
+
+			$bind->{dn} =~ s/[@\.]/,dc=/g;
+			$bind->{dn} =~ s/^/uid=/;
+
+	}
+
 	$bind->{password} = $req->{authentication}->{simple} if $req->{authentication}->{simple};
 	warn "# bind ",dump( $bind );
 	$msg = $self->{upstream}->bind( %$bind );
