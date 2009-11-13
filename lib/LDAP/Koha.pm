@@ -46,7 +46,7 @@ my $ldap_sql_mapping = {
 	'objectGUID'	=> 'borrowernumber',
 	'displayName'	=> 'surname',
 	'sn'		=> 'surname',
-	'pager'		=> 'rfid_sid',
+	'pager'		=> 'a.attribute',	# was: rfid_sid
 };
 
 sub __sql_column {

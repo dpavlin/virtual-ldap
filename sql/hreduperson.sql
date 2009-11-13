@@ -12,13 +12,16 @@ select
 	concat(firstname,' ',surname)			as cn,
 
 	-- SAFEQ specific mappings from UMgr-LDAP.conf
-	borrowernumber					as objectGUID,
+	b.borrowernumber					as objectGUID,
 	surname						as displayName,
-	rfid_sid					as pager,
+	a.attribute					as pager,
 	email						as mail,
 	categorycode					as memberOf,
 	categorycode					as ou,
 	categorycode					as department,
-	concat('/home/',borrowernumber)			as homeDirectory
-from borrowers
+	concat('/home/',b.borrowernumber)			as homeDirectory
+from borrowers b
+left join borrower_attributes a on b.borrowernumber = a.borrowernumber and code='RFID_SID'
+
+
 
