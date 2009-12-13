@@ -3,6 +3,12 @@
 # This program is free software; you can redistribute it and/or
 # modify it under the same terms as Perl itself.
 
+# It's modified by Dobrica Pavlinusic <dpavlin@rot13.org> to include following:
+#
+# * rewrite LDAP bind request cn: username@domain.com -> uid=username,dc=domain,dc=com
+# * rewrite search responses:
+# ** expand key:value pairs from hrEduPersonUniqueNumber into hrEduPersonUniqueNumber_key
+# ** augment response with yaml/dn.yaml data (for external data import)
 
 use strict;
 use warnings;
@@ -14,9 +20,11 @@ use warnings;
 use Data::Dump qw/dump/;
 use Convert::ASN1 qw(asn_read);
 use Net::LDAP::ASN qw(LDAPRequest LDAPResponse);
-our $VERSION = '0.2';
+our $VERSION = '0.3';
 use fields qw(socket target);
 use YAML qw/LoadFile/;
+
+my $debug = 1;
 
 my $config = {
 	yaml_dir => './yaml/',
@@ -56,9 +64,11 @@ sub handle {
 
 	# read from client
 	asn_read($clientsocket, my $reqpdu);
-	log_request($reqpdu);
-
-	return 1 unless $reqpdu;
+	if ( ! $reqpdu ) {
+		warn "WARNING no reqpdu\n";
+		return 1;
+	}
+	$reqpdu = log_request($reqpdu);
 
 	# send to server
 	print $serversocket $reqpdu or die "Could not send PDU to server\n ";
@@ -86,6 +96,20 @@ sub log_request {
 #	print "Request Perl:\n";
 	my $request = $LDAPRequest->decode($pdu);
 	warn "## request = ",dump($request);
+
+	if ( defined $request->{bindRequest} ) {
+		if ( $request->{bindRequest}->{name} =~ m{@} ) {
+			my $old = $request->{bindRequest}->{name};
+			$request->{bindRequest}->{name} =~ s/[@\.]/,dc=/g;
+			$request->{bindRequest}->{name} =~ s/^/uid=/;
+			warn "rewrite bind cn $old -> ", $request->{bindRequest}->{name};
+			Convert::ASN1::asn_hexdump(\*STDOUT,$pdu) if $debug;
+			$pdu = $LDAPRequest->encode($request);
+			Convert::ASN1::asn_hexdump(\*STDOUT,$pdu) if $debug;
+		}
+	}
+
+	return $pdu;
 }
 
 sub log_response {
