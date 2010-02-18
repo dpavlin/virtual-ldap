@@ -45,7 +45,7 @@ my $dbh = DBI->connect($dsn . $database, $user,$passwd, { RaiseError => 1, AutoC
 
 my $ldap_sql_mapping = {
 	'uid'		=> 'userid',
-	'objectGUID'	=> 'borrowernumber',
+	'objectGUID'	=> 'b.borrowernumber',
 	'displayName'	=> 'surname',
 	'sn'		=> 'surname',
 	'pager'		=> 'a.attribute',	# was: rfid_sid
