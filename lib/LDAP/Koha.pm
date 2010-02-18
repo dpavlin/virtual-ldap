@@ -15,6 +15,8 @@ use File::Slurp;
 
 use Data::Dump qw/dump/;
 
+my $debug = 0; # XXX very slow
+
 # XXX test with:
 #
 # ldapsearch -h localhost -p 2389 -b dc=ffzg,dc=hr -x 'otherPager=200903160021'
@@ -120,13 +122,13 @@ sub __ldap_search_to_sql {
 sub _dn_attributes {
 	my ($row,$base) = @_;
 
-	warn "## row = ",dump( $row );
+	warn "## row = ",dump( $row ) if $debug;
 
 	die "no objectClass column in ",dump( $row ) unless defined $row->{objectClass};
 
 	$row->{objectClass} = [ split(/\s+/, $row->{objectClass}) ] if $row->{objectClass} =~ m{\n};
 
-	warn "## row = ",dump( $row );
+	warn "## row = ",dump( $row ) if $debug;
 
 	my $dn = delete( $row->{dn} ) || die "no dn in ",dump( $row );
 
@@ -202,7 +204,7 @@ sub search {
 		my $sql
 			= $sql_select
 			. $sql_where
-			. ( $objectclass =~ m{person}i ? " LIMIT $max_results" : '' ) # add limit just for persons
+#			. ( $objectclass =~ m{person}i ? " LIMIT $max_results" : '' ) # add limit just for persons
 			;
 
 		warn "# SQL:\n$sql\n# DATA: ",dump( @values );
