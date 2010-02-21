@@ -32,13 +32,15 @@ my $config = {
 	upstream_ldap => 'ldap.ffzg.hr',
 	upstream_ssl => 1,
 	overlay_prefix => 'ffzg-',
-	log_file => 'log',
+#	log_file => 'log/ldap-rewrite.log',
 
 };
 
 my $log_fh;
 
 sub log {
+	return unless $config->{log_file};
+
 	if ( ! $log_fh ) {
 		open($log_fh, '>>', $config->{log_file}) || die "can't open ", $config->{log_file},": $!";
 		print $log_fh "# " . time;
