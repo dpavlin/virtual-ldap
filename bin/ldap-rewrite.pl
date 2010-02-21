@@ -103,7 +103,7 @@ sub log_request {
 		if ( $request->{bindRequest}->{name} =~ m{@} ) {
 			my $old = $request->{bindRequest}->{name};
 			$request->{bindRequest}->{name} =~ s/[@\.]/,dc=/g;
-			$request->{bindRequest}->{name} =~ s/^/uid=/;
+			$request->{bindRequest}->{name} =~ s/^/uid=/ unless $request->{bindRequest}->{name} =~ m/^uid=/;
 			warn "rewrite bind cn $old -> ", $request->{bindRequest}->{name};
 			Convert::ASN1::asn_hexdump(\*STDOUT,$pdu) if $debug;
 			$pdu = $LDAPRequest->encode($request);
