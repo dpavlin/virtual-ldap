@@ -13,6 +13,7 @@ features(
 		-default => 0,
 		'Net::LDAP::Server',
 		'URI::Escape',
+		'File::Slurp',
 	],
 	'ldap-rewrite.pl' => [
 		-default => 1,
