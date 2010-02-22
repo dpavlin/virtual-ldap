@@ -11,7 +11,7 @@ BEGIN {
 }
 
 our $config;
-ok( require "t/config.pl", 'config.pl' );
+ok( require( ( shift @ARGV || 't/config.pl' ) ), 'config.pl' );
 
 sub ldap_check_error {
 	my $o = shift;
