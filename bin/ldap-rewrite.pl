@@ -24,7 +24,7 @@ our $VERSION = '0.3';
 use fields qw(socket target);
 use YAML qw/LoadFile/;
 
-my $debug = 1;
+my $debug = 0;
 
 my $config = {
 	yaml_dir => './yaml/',
