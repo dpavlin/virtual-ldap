@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 use Test::WWW::Mechanize;
 use File::Slurp;
 
@@ -33,3 +33,4 @@ $mech->submit_form_ok({
 }, 'login');
 save $mech->content;
 
+$mech->follow_link_ok({ url_regex => qr/logout/ }, 'logout' );
