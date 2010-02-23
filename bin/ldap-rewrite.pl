@@ -67,8 +67,8 @@ sub handle {
 	# read from client
 	asn_read($clientsocket, my $reqpdu);
 	if ( ! $reqpdu ) {
-		warn "WARNING no reqpdu\n";
-		return 1;
+		warn "client closed connection\n";
+		return 0;
 	}
 	$reqpdu = log_request($reqpdu);
 
@@ -79,18 +79,24 @@ sub handle {
 	my $ready;
 	my $sel = IO::Select->new($serversocket);
 	for( $ready = 1 ; $ready ; $ready = $sel->can_read(0)) {
-		asn_read($serversocket, my $respdu) or return 1;
+		asn_read($serversocket, my $respdu);
+		if ( ! $respdu ) {
+			warn "server closed connection\n";
+			return 0;
+		}
 		$respdu = log_response($respdu);
 		# and send the result to the client
-		print $clientsocket $respdu;
+		print $clientsocket $respdu || return 0;
 	}
 
-	return 0;
+	return 1;
 }
 
 
 sub log_request {
 	my $pdu=shift;
+
+	die "empty pdu" unless $pdu;
 
 #	print '-' x 80,"\n";
 #	print "Request ASN 1:\n";
@@ -116,6 +122,7 @@ sub log_request {
 
 sub log_response {
 	my $pdu=shift;
+	die "empty pdu" unless $pdu;
 
 #	print '-' x 80,"\n";
 #	print "Response ASN 1:\n";
@@ -167,34 +174,6 @@ sub log_response {
 	return $pdu;
 }
 
-sub run_proxy {
-	my $listenersock = shift;
-	my $targetsock=shift;
-
-	die "Could not create listener socket: $!\n" unless $listenersock;
-	die "Could not create connection to server: $!\n" unless $targetsock;
-
-	my $sel = IO::Select->new($listenersock);
-	my %Handlers;
-	while (my @ready = $sel->can_read) {
-		foreach my $fh (@ready) {
-			if ($fh == $listenersock) {
-				# let's create a new socket
-				my $psock = $listenersock->accept;
-				$sel->add($psock);
-			} else {
-				my $result = handle($fh,$targetsock);
-				if ($result) {
-					# we have finished with the socket
-					$sel->remove($fh);
-					$fh->close;
-					delete $Handlers{*$fh};
-				}
-			}
-		}
-	}
-}
-
 
 my $listenersock = IO::Socket::INET->new(
 	Listen => 5,
@@ -203,16 +182,45 @@ my $listenersock = IO::Socket::INET->new(
 	LocalAddr => $config->{listen},
 ) || die "can't open listen socket: $!";
 
+our $server_sock;
 
-my $targetsock = $config->{upstream_ssl}
-	? IO::Socket::INET->new(
-		Proto => 'tcp',
-		PeerAddr => $config->{upstream_ldap},
-		PeerPort => 389,
-	)
-	: IO::Socket::SSL->new( $config->{upstream_ldap} . ':ldaps')
-	|| die "can't open upstream socket: $!";
+sub connect_to_server {
+	my $sock;
+	if ( $config->{upstream_ssl} ) {
+		$sock = IO::Socket::SSL->new( $config->{upstream_ldap} . ':ldaps' );
+	} else {
+		$sock = IO::Socket::INET->new(
+			Proto => 'tcp',
+			PeerAddr => $config->{upstream_ldap},
+			PeerPort => 389,
+		);
+	}
+	die "can't open ", $config->{upstream_ldap}, " $!\n" unless $sock;
+	warn "## connected to ", $sock->peerhost, ":", $sock->peerport, "\n";
+	return $sock;
+}
 
-run_proxy($listenersock,$targetsock);
+my $sel = IO::Select->new($listenersock);
+while (my @ready = $sel->can_read) {
+	foreach my $fh (@ready) {
+		if ($fh == $listenersock) {
+			# let's create a new socket
+			my $psock = $listenersock->accept;
+			$sel->add($psock);
+			warn "## add $psock " . time;
+		} else {
+			$server_sock->{$fh} ||= connect_to_server;
+			if ( ! handle($fh,$server_sock->{$fh}) ) {
+				warn "## remove $fh " . time;
+				$sel->remove($server_sock->{$fh});
+				$server_sock->{$fh}->close;
+				delete $server_sock->{$fh};
+				# we have finished with the socket
+				$sel->remove($fh);
+				$fh->close;
+			}
+		}
+	}
+}
 
 1;
