@@ -6,4 +6,7 @@ $config = {
 		base => 'dc=example,dc=com',
 		filter => 'uid=login',
 	},
+	attributes_required => [ qw/
+		uid
+	/ ],
 };

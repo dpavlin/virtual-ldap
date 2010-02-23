@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 use Data::Dump qw(dump);
 
 BEGIN {
@@ -28,7 +28,18 @@ ok( my $search = $ldap->search( %{ $config->{search} } ), 'search ' . dump( $con
 ldap_check_error $search;
 
 foreach my $entry ( $search->entries ) {
+
 	diag dump $entry;
+
+	my $missing = 0;
+	my @required = @{ $config->{attributes_required} };
+	foreach my $attr ( @required ) {
+		next if grep { /^\Q$attr\E$/i } $entry->attributes;
+		$missing++;
+		diag "$missing missing $attr\n";
+	}
+
+	ok( ! $missing, "attributes " . dump( @required ) );
 }
 
 ok( $ldap->unbind, 'unbind' );
