@@ -22,6 +22,10 @@ features(
 		'Convert::ASN1',
 		'Net::LDAP::ASN',
 	],
+	't/koha integration tests' => [
+		-default => 0,
+		'Test::WWW::Mechanize',
+	],
 );
 
 auto_install;
