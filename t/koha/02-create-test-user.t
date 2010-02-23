@@ -15,7 +15,11 @@ use WWW::Mechanize;
 my $mech = Test::WWW::Mechanize->new;
 
 my $save_count = 1;
-sub save { write_file "/tmp/login-$save_count.html", @_; $save_count++; }
+sub save {
+	my $path = '/tmp/login-' . $save_count++ . '.html';
+	write_file $path, @_;
+	warn "# save $path ", -s $path, " bytes\n";
+}
 	
 
 $mech->get_ok( 'https://localhost', 'opac' );
