@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 37;
+use Test::More tests => 75;
 use Data::Dump qw(dump);
 
 BEGIN {
@@ -21,11 +21,6 @@ ok( my $ldap = Net::LDAP->new( 'localhost:2389' ), 'new Net::LDAP' );
 ok( my $bind = $ldap->bind, 'bind' );
 ldap_check_error $bind;
 
-my @test_searches = ( qw/
-uid=dpavlin@ffzg.hr
-pager=E00401001F77E218
-/ );
-
 sub check_search_attributes {
 	my $search = shift;
 
@@ -35,14 +30,28 @@ sub check_search_attributes {
 	}
 }
 
-foreach my $search ( @test_searches ) {
-
+sub search {
+	my ($ldap,$search) = @_;
 	ok( my $search = $ldap->search( filter => $search ), "search $search" );
 	ldap_check_error $search;
 	ok( $search->entries, 'have results' );
-	check_search_attributes $search => 'uid', 'mail', 'pager', 'memberOf';
-
+	return $search;
 }
 
+foreach my $search ( qw/
+uid=dpavlin@ffzg.hr
+pager=E00401001F77E218
+/ ) {
+	my $entries = search $ldap => $search;
+	check_search_attributes $entries => 'uid', 'mail', 'pager', 'memberOf';
+
+	$entries = search $ldap => "(&(objectclass=HrEduPerson)($search))";
+	check_search_attributes $entries => 'uid', 'mail', 'pager', 'memberOf';
+}
+
+search $ldap => $_ foreach ( qw/
+objectclass=organizationalUnit
+objectclass=group
+/ );
 
 ok( $ldap->unbind, 'unbind' );
