@@ -29,7 +29,8 @@ ldap_check_error $search;
 
 foreach my $entry ( $search->entries ) {
 
-	diag dump $entry;
+#	diag dump $entry;
+	$entry->dump;
 
 	my $missing = 0;
 	my @required = @{ $config->{attributes_required} };
