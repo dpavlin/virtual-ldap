@@ -145,7 +145,7 @@ sub log_response {
 				foreach my $val ( @{ $attr->{vals} } ) {
 					next if $val !~ m{.+:.+};
 					my ( $n, $v ) = split(/\s*:\s*/, $val );
-					push @attrs, { type => $_->{type} . '_' . $n, vals => [ $v ] };
+					push @attrs, { type => $attr->{type} . '_' . $n, vals => [ $v ] };
 				}
 			}
 		}
