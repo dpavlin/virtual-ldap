@@ -136,15 +136,19 @@ sub log_response {
 
 		my @attrs;
 
-		map {
-			if ( $_->{type} eq 'hrEduPersonUniqueNumber' ) {
-				foreach my $val ( @{ $_->{vals} } ) {
+		foreach my $attr ( @{ $response->{protocolOp}->{searchResEntry}->{attributes} } ) {
+			if ( $attr->{type} =~ m/date/i ) {
+				foreach my $i ( 0 .. $#{ $attr->{vals} } ) {
+					$attr->{vals}->[$i] = "$1-$2-$3" if $attr->{vals}->[$i] =~ m/^([12]\d\d\d)([01]\d+)([123]\d+)$/;
+				}
+			} elsif ( $attr->{type} eq 'hrEduPersonUniqueNumber' ) {
+				foreach my $val ( @{ $attr->{vals} } ) {
 					next if $val !~ m{.+:.+};
 					my ( $n, $v ) = split(/\s*:\s*/, $val );
 					push @attrs, { type => $_->{type} . '_' . $n, vals => [ $v ] };
 				}
 			}
-		} @{ $response->{protocolOp}->{searchResEntry}->{attributes} };
+		}
 
 		warn "# ++ attrs ",dump( @attrs );
 
