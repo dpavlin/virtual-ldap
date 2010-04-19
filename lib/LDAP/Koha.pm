@@ -39,8 +39,6 @@ $SIG{__DIE__} = sub {
 
 require 'config.pl' if -e 'config.pl';
 
-my $dbh = DBI->connect($dsn . $database, $user,$passwd, { RaiseError => 1, AutoCommit => 1 }) || die $DBI::errstr;
-
 # we need reverse LDAP -> SQL mapping for where clause
 
 my $ldap_sql_mapping = {
@@ -208,6 +206,7 @@ sub search {
 			;
 
 		warn "# SQL:\n$sql\n# DATA: ",dump( @values );
+		my $dbh = DBI->connect_cached($dsn . $database, $user,$passwd, { RaiseError => 1, AutoCommit => 1 }) || die $DBI::errstr;
 		my $sth = $dbh->prepare( $sql );
 		$sth->execute( @values );
 
