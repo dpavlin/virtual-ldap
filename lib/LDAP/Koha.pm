@@ -219,13 +219,13 @@ sub search {
 
 			my ( $dn, $attributes ) = _dn_attributes( $row, $base );
 
-			warn "# dn $last_dn ... $dn\n";
+			warn "## dn $last_dn ... $dn\n" if $debug;
 
 			if ( $dn ne $last_dn ) {
 
 				if ( $entry ) {
 					#$entry->changetype( 'modify' );
-					warn "### entry ",$entry->dump( \*STDERR );
+					warn "### entry ",$entry->dump( \*STDERR ) if $debug;
 					push @entries, $entry;
 					undef $entry;
 				}
@@ -240,7 +240,7 @@ sub search {
 			} else {
 				foreach my $n ( keys %$attributes ) {
 					my $v = $attributes->{$n};
-					warn "# attr $n = $v\n";
+					warn "## attr $n = $v\n" if $debug;
 					$entry->add( $n, $v ) if $entry->get_value( $n ) ne $v;
 				}
 			}
@@ -251,7 +251,7 @@ sub search {
 		}
 
 		if ( $entry ) {
-			warn "### last entry ",$entry->dump( \*STDERR );
+			warn "### last entry ",$entry->dump( \*STDERR ) if $debug;
 			push @entries, $entry;
 		}
 
