@@ -3,12 +3,17 @@
 use warnings;
 use strict;
 
-use Test::More tests => 75;
+use Test::More tests => 76;
 use Data::Dump qw(dump);
 
 BEGIN {
 	use_ok 'Net::LDAP';
 }
+
+our $config;
+ok( require( ( shift @ARGV || 't/config.pl' ) ), 'config.pl' );
+
+diag "config ",dump($config);
 
 sub ldap_check_error {
 	my $o = shift;
@@ -32,10 +37,10 @@ sub check_search_attributes {
 
 sub search {
 	my ($ldap,$search) = @_;
-	ok( my $search = $ldap->search( filter => $search ), "search $search" );
-	ldap_check_error $search;
-	ok( $search->entries, 'have results' );
-	return $search;
+	ok( my $result = $ldap->search( filter => $search ), "search $search" );
+	ldap_check_error $result;
+	ok( $result->entries, 'have results' );
+	return $result;
 }
 
 foreach my $search ( qw/
