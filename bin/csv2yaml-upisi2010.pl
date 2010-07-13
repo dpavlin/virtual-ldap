@@ -10,6 +10,9 @@ use YAML qw/DumpFile/;
 use Text::CSV;
 
 my $debug = 0;
+my $dir = 'yaml/hrEduPersonUniqueNumber_JMBG';
+
+mkdir $dir unless -e $dir;
 
 my $path = shift @ARGV || die "usage: $0 file.csv\n";
 
@@ -22,7 +25,11 @@ while ( my $row = $csv->getline( $fh ) ) {
 	my ( $ulica, $grad ) = split(/\s*,\s*/, $row->[8]);
 
 	my $info = {
+		prezime => $row->[0],
+		ime => $row->[1],
 		jmbg => $row->[2],
+		datum_rodjenja => $row->[3],
+		email => $row->[4],
 		adresa_ulica => $ulica,
 		adresa_grad  => $grad,
 		tel_fixed => $row->[9],
@@ -30,8 +37,9 @@ while ( my $row = $csv->getline( $fh ) ) {
 		spol => substr($row->[2],9,3) < 500 ? 'M' : 'F',
 	};
 
-	warn dump($row, $info);
-	#DumpFile( "yaml/$uuid.yaml", $hash );
+	my $uuid = $row->[2];
+	DumpFile( "$dir/$uuid.yaml", $info );
+	warn "$uuid\n";
 }
 $csv->eof or $csv->error_diag();
 close $fh;
