@@ -154,10 +154,21 @@ sub log_response {
 
 		push @{ $response->{protocolOp}->{searchResEntry}->{attributes} }, $_ foreach @attrs;
 
-		my $path = $config->{yaml_dir} . "$uid.yaml";
-		if ( -e $path ) {
-			my $data = LoadFile($path);
-			warn "# yaml = ",dump($data);
+		my @additional_yamls = ( $uid );
+		foreach my $attr ( @{ $response->{protocolOp}->{searchResEntry}->{attributes} } ) {
+			foreach my $v ( @{ $attr->{vals} } ) {
+				push @additional_yamls, $attr->{type} . '/' . $v;
+			}
+		}
+
+		#warn "# additional_yamls ",dump( @additional_yamls );
+
+		foreach my $path ( @additional_yamls ) {
+			my $full_path = $config->{yaml_dir} . '/' . $path . '.yaml';
+			next unless -e $full_path;
+
+			my $data = LoadFile( $full_path );
+			warn "# $full_path yaml = ",dump($data);
 
 			foreach my $type ( keys %$data ) {
 
