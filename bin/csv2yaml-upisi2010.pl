@@ -5,6 +5,8 @@ use strict;
 
 # 2010-07-13 Dobrica Pavlinusic <dpavlin@rot13.org>
 
+# http://en.wikipedia.org/wiki/Unique_Master_Citizen_Number
+
 use Data::Dump qw/dump/;
 use YAML qw/DumpFile/;
 use Text::CSV;
@@ -15,6 +17,19 @@ my $dir = 'yaml/hrEduPersonUniqueNumber_JMBG';
 mkdir $dir unless -e $dir;
 
 my $path = shift @ARGV || die "usage: $0 file.csv\n";
+
+
+sub valid_jmbg {
+	my $jmbg = shift;
+	return 0 unless $jmbg =~ /^\d{13}$/;
+	my @c = split(//, $jmbg);
+	my $S=0;
+	for (my $i=0;$i<6;$i++){
+		$S+= (7-$i)*($c[$i]+$c[6+$i]);
+	}
+	my $checksum = 11-($S%11);
+	return $checksum == $c[12];
+}
 
 my $csv = Text::CSV->new ( { binary => 1 } )  # should set binary attribute.
 	or die "Cannot use CSV: ".Text::CSV->error_diag ();
@@ -39,7 +54,8 @@ while ( my $row = $csv->getline( $fh ) ) {
 
 	my $uuid = $row->[2];
 	DumpFile( "$dir/$uuid.yaml", $info );
-	warn "$uuid\n";
+	warn "$uuid ", valid_jmbg( $row->[2] ) ? 'OK' : 'INVALID', "\n";
+
 }
 $csv->eof or $csv->error_diag();
 close $fh;
