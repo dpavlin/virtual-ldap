@@ -147,6 +147,10 @@ sub log_response {
 					my ( $n, $v ) = split(/\s*:\s*/, $val );
 					push @attrs, { type => $attr->{type} . '_' . $n, vals => [ $v ] };
 				}
+			} elsif ( $attr->{type} eq 'hrEduPersonGroupMember' ) {
+				foreach my $i ( 0 .. $#{ $attr->{vals} } ) {
+					$attr->{vals}->[$i] =~ s/^u2010/p2010/gs && warn "FIXME group";
+				}
 			}
 		}
 
