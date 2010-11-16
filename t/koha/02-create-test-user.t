@@ -5,7 +5,6 @@ use strict;
 
 use Test::More tests => 4;
 use Test::WWW::Mechanize;
-use File::Slurp;
 
 our $config;
 require 't/config.pl';
@@ -17,7 +16,8 @@ my $mech = Test::WWW::Mechanize->new;
 my $save_count = 1;
 sub save {
 	my $path = '/tmp/login-' . $save_count++ . '.html';
-	write_file $path, @_;
+	open(my $fh, '>', $path);
+	print $fh @_;
 	warn "# save $path ", -s $path, " bytes\n";
 }
 	
@@ -25,7 +25,7 @@ sub save {
 $mech->get_ok( 'https://localhost', 'opac' );
 save $mech->content;
 
-$mech->follow_link_ok({ text_regex => qr/Log in to Your Account/i }, 'login form' );
+$mech->follow_link_ok({ url_regex => qr/opac-user/i }, 'login form' );
 save $mech->content;
 
 $mech->submit_form_ok({
