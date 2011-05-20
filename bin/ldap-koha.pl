@@ -26,6 +26,7 @@ while (my @ready = $sel->can_read) {
 		if ($fh == $sock) {
 			# let's create a new socket
 			my $psock = $sock->accept;
+			$psock->sockopt(SO_KEEPALIVE,1);
 			$sel->add($psock);
 			$Handlers{*$psock} = LDAP::Koha->new($psock);
 		} else {
