@@ -21,7 +21,7 @@ sub ldap_check_error {
 	diag $o->error if $o->code;
 }
 
-ok( my $ldap = Net::LDAP->new( 'localhost:2389' ), 'new Net::LDAP' );
+ok( my $ldap = Net::LDAP->new( $ENV{LISTEN} || 'localhost:2389' ), 'new Net::LDAP' );
 
 ok( my $bind = $ldap->bind, 'bind' );
 ldap_check_error $bind;
