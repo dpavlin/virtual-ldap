@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::WWW::Mechanize;
 use XML::Simple;
 use Data::Dump qw(dump);
@@ -14,13 +14,15 @@ my $koha_conf = $ENV{KOHA_CONF} || '/etc/koha/sites/ffzg/koha-conf.xml';
 my $xml = XMLin( $koha_conf );
 diag 'Koha config = ',dump $xml->{config};
 
+ok( $xml->{config}->{useldapserver}, 'useldapserver' );
+
 our $config;
 require 't/config.pl';
 diag 'test config = ',dump $config;
 
 my $mech = Test::WWW::Mechanize->new;
 
-$mech->get_ok( $url, 'intranet' );
+$mech->get_ok( $url, "intranet $url" );
 
 $mech->submit_form_ok({
 	fields => {
@@ -32,7 +34,7 @@ $mech->submit_form_ok({
 $mech->submit_form_ok({
 	form_number => 2,
 	fields => {
-		member => 'kohatest@ffzg.hr',
+		member => $config->{bind_as},
 	},
 }, 'find patron' );
 
