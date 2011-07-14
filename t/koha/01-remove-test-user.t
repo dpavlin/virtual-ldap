@@ -5,11 +5,18 @@ use strict;
 
 use Test::More tests => 6;
 use Test::WWW::Mechanize;
+use XML::Simple;
+use Data::Dump qw(dump);
 
-our ( $user, $passwd );
-require 'config.pl';
+my $url =       $ENV{INTRANET}  || 'http://ffzg.koha-dev.rot13.org:8080';
+my $koha_conf = $ENV{KOHA_CONF} || '/etc/koha/sites/ffzg/koha-conf.xml';
 
-my $url = 'https://localhost:8443'; # Koha intranet
+my $xml = XMLin( $koha_conf );
+diag 'Koha config = ',dump $xml->{config};
+
+our $config;
+require 't/config.pl';
+diag 'test config = ',dump $config;
 
 my $mech = Test::WWW::Mechanize->new;
 
@@ -17,10 +24,10 @@ $mech->get_ok( $url, 'intranet' );
 
 $mech->submit_form_ok({
 	fields => {
-		userid => $user,
-		password => $passwd,
+		userid   => $xml->{config}->{user},
+		password => $xml->{config}->{pass},
 	},
-}, 'login');
+}, "login $xml->{config}->{user}");
 
 $mech->submit_form_ok({
 	form_number => 2,
