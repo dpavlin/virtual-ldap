@@ -20,9 +20,10 @@ sub save {
 	print $fh @_;
 	warn "# save $path ", -s $path, " bytes\n";
 }
-	
 
-$mech->get_ok( 'https://localhost', 'opac' );
+my $opac_url = $ENV{OPAC_URL} || 'http://ffzg.koha-dev.rot13.org';
+
+$mech->get_ok( $opac_url, "opac $opac_url" );
 save $mech->content;
 
 $mech->follow_link_ok({ url_regex => qr/opac-user/i }, 'login form' );
