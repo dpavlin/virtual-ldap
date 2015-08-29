@@ -110,7 +110,7 @@ sub log_request {
 			my $old = $request->{bindRequest}->{name};
 			$request->{bindRequest}->{name} =~ s/[@\.]/,dc=/g;
 			$request->{bindRequest}->{name} =~ s/^/uid=/;
-			warn "rewrite bind cn $old -> ", $request->{bindRequest}->{name};
+			print "rewrite bind cn $old -> ", $request->{bindRequest}->{name}, "\n";
 			Convert::ASN1::asn_hexdump(\*STDOUT,$pdu) if $debug;
 			$pdu = $LDAPRequest->encode($request);
 			Convert::ASN1::asn_hexdump(\*STDOUT,$pdu) if $debug;
@@ -132,7 +132,7 @@ sub log_response {
 
 	if ( defined $response->{protocolOp}->{searchResEntry} ) {
 		my $uid = $response->{protocolOp}->{searchResEntry}->{objectName};
-		warn "## objectName $uid";
+		print "rewrite objectName $uid\n";
 
 		my @attrs;
 
