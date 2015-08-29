@@ -8,4 +8,4 @@ select
 	concat('uid=',replace(userid,'@ffzg.hr',''),',ou=',c.categorycode,',dc=ffzg,dc=hr') as members
 from categories c
 join borrowers b on b.categorycode = c.categorycode
-where length(userid) > 0
+where length(userid) > 0 and userid not like '%@expired'
