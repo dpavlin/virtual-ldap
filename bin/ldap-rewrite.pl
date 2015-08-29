@@ -24,7 +24,8 @@ our $VERSION = '0.3';
 use fields qw(socket target);
 use YAML qw/LoadFile/;
 
-my $debug = 0;
+my $debug = $ENV{DEBUG} || 0;
+$|=1; # flush STDOUT
 
 my $config = {
 	yaml_dir => './yaml/',
@@ -39,6 +40,11 @@ my $config = {
 my $log_fh;
 
 sub log {
+	my $level = $1 if $_[0] =~ m/^(#+)/;
+	return if defined($level) && length($level) > $debug;
+
+	warn join("\n", @_);
+
 	return unless $config->{log_file};
 
 	if ( ! $log_fh ) {
@@ -50,7 +56,7 @@ sub log {
 }
 
 BEGIN {
-	$SIG{'__WARN__'} = sub { warn @_; main::log(@_); }
+	$SIG{'__WARN__'} = sub { main::log(@_); }
 }
 
 
@@ -67,7 +73,7 @@ sub handle {
 	# read from client
 	asn_read($clientsocket, my $reqpdu);
 	if ( ! $reqpdu ) {
-		warn "client closed connection\n";
+		warn "# client closed connection\n";
 		return 0;
 	}
 	$reqpdu = log_request($reqpdu);
@@ -132,7 +138,7 @@ sub log_response {
 
 	if ( defined $response->{protocolOp}->{searchResEntry} ) {
 		my $uid = $response->{protocolOp}->{searchResEntry}->{objectName};
-		print "rewrite objectName $uid\n";
+		warn "# rewrite objectName $uid\n";
 
 		my @attrs;
 
