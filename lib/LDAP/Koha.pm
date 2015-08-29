@@ -64,7 +64,7 @@ use constant RESULT_OK => {
 sub new {
 	my ($class, $sock) = @_;
 	my $self = $class->SUPER::new($sock);
-	print "connection from: ", $sock->peerhost(), "\n";
+	warn "# connection from: ", $sock->peerhost();
 	return $self;
 }
 
@@ -146,7 +146,6 @@ sub _dn_attributes {
 sub search {
 	my $self = shift;
 	my $reqData = shift;
-	print "searching...\n";
 
 	warn "# " . localtime() . " request = ", dump($reqData);
 
@@ -211,6 +210,9 @@ sub search {
 		$sth->execute( @values );
 
 		warn "# ", $sth->rows, " results for ",dump( $reqData->{'filter'} );
+		my $dump = dump( $reqData->{'filter'} );
+		$dump =~ s/[\r\n\s]+/ /gm;
+		print $sth->rows, " results for $dump\n";
 
 		my $last_dn = '?';
 		my $entry;

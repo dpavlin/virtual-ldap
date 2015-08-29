@@ -8,6 +8,16 @@ use IO::Socket;
 use lib 'lib';
 use LDAP::Koha;
 
+my $debug = $ENV{DEBUG} || 0;
+
+BEGIN {
+	$SIG{'__WARN__'} = sub {
+		my $level = $1 if $_[0] =~ m/^(#+)/;
+		return if defined($level) && length($level) > $debug;
+
+		warn join("\n", @_);
+	};
+}
 my $listen = shift @ARGV || 'localhost:2389';
 
 my $sock = IO::Socket::INET->new(
