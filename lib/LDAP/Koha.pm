@@ -46,7 +46,7 @@ my $ldap_sql_mapping = {
 	'objectGUID'	=> 'b.borrowernumber',
 	'displayName'	=> 'surname',
 	'sn'		=> 'surname',
-	'pager'		=> qq{replace(a.attribute, '\r','')},	# was: rfid_sid
+	'pager'		=> qq{replace(replace(a.attribute, char(13),''),char(10),'')},	# was: rfid_sid
 };
 
 sub __sql_column {
