@@ -157,6 +157,20 @@ sub log_response {
 				foreach my $i ( 0 .. $#{ $attr->{vals} } ) {
 					$attr->{vals}->[$i] =~ s/^u2010/p2010/gs && warn "FIXME group";
 				}
+			} elsif ( $attr->{type} eq 'mail' ) {
+				my @emails;
+				foreach my $i ( 0 .. $#{ $attr->{vals} } ) {
+					my $e = $attr->{vals}->[$i];
+					if ( $e =~ m/\s+/ ) {
+						push @emails, split(/\s+/, $e);
+					} else {
+						push @emails, $e;
+					}
+				}
+				$attr->{vals} = [ shift @emails ];
+				foreach my $i ( 0 .. $#emails ) {
+					push @attrs, { type => $attr->{type} . '_' . ( $i + 1 ) , vals => [ $emails[$i] ] };
+				}
 			}
 		}
 
