@@ -24,6 +24,8 @@ ok( my $ldap = Net::LDAP->new( $config->{server} ), 'new Net::LDAP ' . dump( $co
 ok( my $bind = $ldap->bind( $config->{bind_as}, password => $config->{password} ), 'bind ' . $config->{bind_as} );
 ldap_check_error $bind;
 
+$config->{search}->{filter} = $ENV{FILTER} if $ENV{FILTER};
+
 ok( my $search = $ldap->search( %{ $config->{search} } ), 'search ' . dump( $config->{search} ) );
 ldap_check_error $search;
 
