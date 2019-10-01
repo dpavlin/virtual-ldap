@@ -31,7 +31,7 @@ ldap_check_error $search;
 
 foreach my $entry ( $search->entries ) {
 
-#	diag dump $entry;
+	diag dump $entry if $ENV{FILTER};
 	$entry->dump;
 
 	my $missing = 0;
