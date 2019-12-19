@@ -15,12 +15,7 @@ select
 	b.borrowernumber					as objectGUID,
 	surname						as displayName,
 	a.attribute					as pager,
-	case
-		when email    regexp '@ffzg.hr' then email
-		when emailpro regexp '@ffzg.hr' then emailpro
-	else
-		trim(userid)
-	end as mail,
+	email						as mail,
 	categorycode					as memberOf,
 	categorycode					as ou,
 	categorycode					as department,
