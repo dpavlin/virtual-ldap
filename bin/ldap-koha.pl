@@ -9,6 +9,7 @@ use lib 'lib';
 use LDAP::Koha;
 
 my $debug = $ENV{DEBUG} || 0;
+$|=1;
 
 BEGIN {
 	$SIG{'__WARN__'} = sub {
