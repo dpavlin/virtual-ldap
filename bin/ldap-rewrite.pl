@@ -157,6 +157,14 @@ sub log_response {
 				foreach my $i ( 0 .. $#{ $attr->{vals} } ) {
 					$attr->{vals}->[$i] =~ s/^u2010/p2010/gs && warn "FIXME group";
 				}
+			} elsif ( $attr->{type} eq 'homePostalAddress' ) {
+				foreach my $val ( @{ $attr->{vals} } ) {
+					next if $val !~ m{^(.+)\s*,\s*(\d+)\s+(.+)};
+					push @attrs,
+						{ type => 'homePostalAddress_address', vals => [ $1 ] },
+						{ type => 'homePostalAddress_zipcode', vals => [ $2 ] },
+						{ type => 'homePostalAddress_city', vals => [ $3 ] };
+				}
 			} elsif ( $attr->{type} eq 'mail' ) {
 				my @emails;
 				foreach my $i ( 0 .. $#{ $attr->{vals} } ) {
