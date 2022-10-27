@@ -90,7 +90,7 @@ sub handle {
 			warn "server closed connection\n";
 			return 0;
 		}
-		$respdu = log_response($respdu);
+		$respdu = log_response($respdu, $reqpdu);
 		# and send the result to the client
 		print $clientsocket $respdu || return 0;
 	}
@@ -127,8 +127,19 @@ sub log_request {
 }
 
 sub log_response {
-	my $pdu=shift;
+	my ($pdu,$reqpdu)=@_;
 	die "empty pdu" unless $pdu;
+
+	my $search_uid = 0;
+	my $request = $LDAPRequest->decode($reqpdu);
+	if ( exists $request->{searchRequest}->{filter} ) {
+		my $filter = dump($request->{searchRequest}->{filter});
+warn "XXX $filter";
+		if ( $filter =~ m/attributeDesc => "uid"/ ) {
+			warn "got uid search";
+			$search_uid = 1;
+		}
+	}
 
 #	print '-' x 80,"\n";
 #	print "Response ASN 1:\n";
@@ -147,6 +158,7 @@ sub log_response {
 				foreach my $i ( 0 .. $#{ $attr->{vals} } ) {
 					$attr->{vals}->[$i] = "$1-$2-$3" if $attr->{vals}->[$i] =~ m/^([12]\d\d\d)([01]\d+)([0123]\d+)$/;
 				}
+=for disable
 			} elsif ( $attr->{type} eq 'hrEduPersonUniqueNumber' ) {
 				foreach my $val ( @{ $attr->{vals} } ) {
 					next if $val !~ m{.+:.+};
@@ -179,6 +191,27 @@ sub log_response {
 				foreach my $i ( 0 .. $#emails ) {
 					push @attrs, { type => $attr->{type} . '_' . ( $i + 1 ) , vals => [ $emails[$i] ] };
 				}
+=cut
+			} elsif ( $attr->{type} eq 'mail' ) {
+				my @emails;
+				foreach my $i ( 0 .. $#{ $attr->{vals} } ) {
+					my $e = $attr->{vals}->[$i];
+					if ( $e =~ m/\s+/ ) {
+						push @emails, split(/\s+/, $e);
+					} else {
+						push @emails, $e;
+					}
+				}
+				if ( $search_uid ) {	# only for new_user_identity plugin which does uid search
+					$attr->{vals} = [ grep { m/\@ffzg/ } @emails ];	# remote all emails not @ffzg.hr @ffzg.unizg.hr
+				}
+			} elsif ( $attr->{type} eq 'facsimileTelephoneNumber' ) {
+				my @fax;
+				foreach my $i ( 0 .. $#{ $attr->{vals} } ) {
+					my $e = $attr->{vals}->[$i];
+					push @fax, $e;
+				}
+				$attr->{vals} = [ grep { ! m/\Q+385 xx xxxx xxx\E/ } @fax ];
 			}
 		}
 
@@ -186,6 +219,7 @@ sub log_response {
 
 		push @{ $response->{protocolOp}->{searchResEntry}->{attributes} }, $_ foreach @attrs;
 
+=for removed
 		my @additional_yamls = ( $uid );
 		foreach my $attr ( @{ $response->{protocolOp}->{searchResEntry}->{attributes} } ) {
 			foreach my $v ( @{ $attr->{vals} } ) {
@@ -212,6 +246,7 @@ sub log_response {
 				};
 			}
 		}
+=cut
 
 		$pdu = $LDAPResponse->encode($response);
 	}
