@@ -66,6 +66,19 @@ if ( ! -d $config->{yaml_dir} ) {
 
 warn "# config = ",dump( $config );
 
+#use Data::Dumper;
+sub h2str {
+	#local $Data::Dumper::Terse  = 1;
+	#local $Data::Dumper::Indent = 0;
+	#my $str = Dumper(@_);
+	my $str = dump(@_);
+	$str =~ s/\s\s+//g;
+	return $str;
+}
+
+my $last_reqpdu = '';
+my $last_respdu;
+
 sub handle {
  	my $clientsocket=shift;
 	my $serversocket=shift;
@@ -76,11 +89,21 @@ sub handle {
 		warn "# client closed connection\n";
 		return 0;
 	}
-	$reqpdu = log_request($reqpdu);
+
+	if ( h2str($reqpdu) eq $last_reqpdu ) {
+		warn "# cache hit";
+		print $clientsocket $last_respdu || return 0;
+		return 1;
+	}
+
+	my $request = $LDAPRequest->decode($reqpdu);
+	warn "## request = ",dump($request);
+
+	$reqpdu = modify_request($reqpdu, $request);
 
 	# send to server
 	print $serversocket $reqpdu or die "Could not send PDU to server\n ";
-	
+
 	# read from server
 	my $ready;
 	my $sel = IO::Select->new($serversocket);
@@ -90,17 +113,24 @@ sub handle {
 			warn "server closed connection\n";
 			return 0;
 		}
-		$respdu = log_response($respdu, $reqpdu);
+
+		# cache
+		$last_reqpdu = h2str($request->{searchRequest});
+		warn "# cache add $last_reqpdu";
+		$last_respdu = $respdu;
+
+		$respdu = modify_response($respdu, $reqpdu, $request);
 		# and send the result to the client
 		print $clientsocket $respdu || return 0;
+
+
 	}
 
 	return 1;
 }
 
-
-sub log_request {
-	my $pdu=shift;
+sub modify_request {
+	my ($pdu,$request)=@_;
 
 	die "empty pdu" unless $pdu;
 
@@ -108,9 +138,6 @@ sub log_request {
 #	print "Request ASN 1:\n";
 #	Convert::ASN1::asn_hexdump(\*STDOUT,$pdu);
 #	print "Request Perl:\n";
-	my $request = $LDAPRequest->decode($pdu);
-	warn "## request = ",dump($request);
-
 	if ( defined $request->{bindRequest} ) {
 		if ( $request->{bindRequest}->{name} =~ m{@} ) {
 			my $old = $request->{bindRequest}->{name};
@@ -126,17 +153,16 @@ sub log_request {
 	return $pdu;
 }
 
-sub log_response {
-	my ($pdu,$reqpdu)=@_;
+sub modify_response {
+	my ($pdu,$reqpdu,$request)=@_;
 	die "empty pdu" unless $pdu;
 
 	my $search_uid = 0;
-	my $request = $LDAPRequest->decode($reqpdu);
 	if ( exists $request->{searchRequest}->{filter} ) {
 		my $filter = dump($request->{searchRequest}->{filter});
-warn "XXX $filter";
-		if ( $filter =~ m/attributeDesc => "uid"/ ) {
-			warn "got uid search";
+		$filter =~ s/\s\s+/ /gs;
+		if ( $filter =~ m/attributeDesc => "uid"/ ) { # mark uid serach from roundcube for new_user_identity
+			warn "got uid search $filter";
 			$search_uid = 1;
 		}
 	}
