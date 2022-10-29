@@ -66,13 +66,9 @@ if ( ! -d $config->{yaml_dir} ) {
 
 warn "# config = ",dump( $config );
 
-#use Data::Dumper;
 sub h2str {
-	#local $Data::Dumper::Terse  = 1;
-	#local $Data::Dumper::Indent = 0;
-	#my $str = Dumper(@_);
 	my $str = dump(@_);
-	$str =~ s/\s\s+//g;
+	$str =~ s/\s//g;
 	return $str;
 }
 
@@ -99,6 +95,29 @@ sub handle {
 	my $request = $LDAPRequest->decode($reqpdu);
 	warn "## request = ",dump($request);
 
+	my $request_filter;
+	if (
+		exists $request->{searchRequest} &&
+		exists $request->{searchRequest}->{filter}
+	) {
+		my $filter = dump($request->{searchRequest}->{filter});
+		$filter =~ s/\s\s+/ /gs;
+
+		warn "# FILTER $filter";
+		if ( $filter =~ m/(attributeDesc => "uid")/ ) { # mark uid serach from roundcube for new_user_identity
+			warn "filter uid $1";
+			$request_filter->{uid} = 1;
+		}
+		if ( $filter =~ m/(present => "jpegphoto")/ ) {
+			warn "hard-coded response for $1";
+			print $clientsocket $LDAPResponse->encode( {
+				messageID  => $request->{messageID},
+				searchResDone => { errorMessage => "", matchedDN => "", resultCode => 0 },
+			} ) || return 0;
+			return 1;
+		}
+	}
+
 	$reqpdu = modify_request($reqpdu, $request);
 
 	# send to server
@@ -114,12 +133,13 @@ sub handle {
 			return 0;
 		}
 
+		$respdu = modify_response($respdu, $reqpdu, $request, $request_filter);
+
 		# cache
 		$last_reqpdu = h2str($request->{searchRequest});
-		warn "# cache add $last_reqpdu";
+		warn "# last_reqpdu $last_reqpdu";
 		$last_respdu = $respdu;
 
-		$respdu = modify_response($respdu, $reqpdu, $request);
 		# and send the result to the client
 		print $clientsocket $respdu || return 0;
 
@@ -154,18 +174,8 @@ sub modify_request {
 }
 
 sub modify_response {
-	my ($pdu,$reqpdu,$request)=@_;
+	my ($pdu,$reqpdu,$request,$request_filter)=@_;
 	die "empty pdu" unless $pdu;
-
-	my $search_uid = 0;
-	if ( exists $request->{searchRequest}->{filter} ) {
-		my $filter = dump($request->{searchRequest}->{filter});
-		$filter =~ s/\s\s+/ /gs;
-		if ( $filter =~ m/attributeDesc => "uid"/ ) { # mark uid serach from roundcube for new_user_identity
-			warn "got uid search $filter";
-			$search_uid = 1;
-		}
-	}
 
 #	print '-' x 80,"\n";
 #	print "Response ASN 1:\n";
@@ -228,7 +238,7 @@ sub modify_response {
 						push @emails, $e;
 					}
 				}
-				if ( $search_uid ) {	# only for new_user_identity plugin which does uid search
+				if ( $request_filter->{uid} ) {	# only for new_user_identity plugin which does uid search
 					$attr->{vals} = [ grep { m/\@ffzg/ } @emails ];	# remote all emails not @ffzg.hr @ffzg.unizg.hr
 				}
 			} elsif ( $attr->{type} eq 'facsimileTelephoneNumber' ) {
